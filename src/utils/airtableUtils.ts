@@ -185,17 +185,24 @@ export const createOrder = async (customerId: string, orderData: OrderData): Pro
     const orderNumber = generateOrderNumber();
     console.log('📊 AIRTABLE - Creating order:', orderNumber);
 
-    // Create the order
+    // Create the order - only include fields that exist in the schema
+    const orderFields: any = {
+      'Order Number': orderNumber,
+      'Customer': [customerId],
+      'Order Date': new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+      'Status': 'Pending',
+      'Total Amount': orderData.totalAmount
+    };
+
+    // Only add PromoCode if it exists and is not empty
+    if (orderData.promoCode && orderData.promoCode.trim() !== '') {
+      orderFields['Promo Code'] = orderData.promoCode;
+    }
+
+    console.log('📊 AIRTABLE - Order fields being sent:', orderFields);
+
     const newOrder = await base(ORDERS_TABLE).create([{
-      fields: {
-        'Order Number': orderNumber,
-        'Customer': [customerId],
-        'Order Date': new Date().toISOString().split('T')[0], // YYYY-MM-DD format
-        'Status': 'Pending',
-        'Total Amount': orderData.totalAmount,
-        'Promo Code': orderData.promoCode || '',
-        'Payment Method': orderData.paymentMethod
-      }
+      fields: orderFields
     }]);
 
     const orderId = newOrder[0].id;
