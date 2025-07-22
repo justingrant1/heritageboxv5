@@ -190,7 +190,8 @@ export const createOrder = async (customerId: string, orderData: OrderData): Pro
         'Order Date': new Date().toISOString().split('T')[0], // YYYY-MM-DD format
         'Status': 'Pending',
         'Total Amount': orderData.totalAmount,
-        'Promo Code': orderData.promoCode || ''
+        'Promo Code': orderData.promoCode || '',
+        'Payment Method': orderData.paymentMethod
       }
     }]);
 
@@ -274,6 +275,8 @@ export const processOrderToAirtable = async (orderData: OrderData): Promise<bool
 export const convertLegacyOrderData = (legacyOrderData: any): OrderData => {
   const { customerInfo, orderDetails } = legacyOrderData;
   
+  console.log('🔄 AIRTABLE - Converting legacy order data:', legacyOrderData);
+  
   // Create order items from package and add-ons
   const orderItems: OrderItem[] = [];
   
@@ -299,38 +302,41 @@ export const convertLegacyOrderData = (legacyOrderData: any): OrderData => {
     });
   }
 
-  // Add-ons as separate items
+  // Add-ons as separate items - Parse from the actual addOns array
   if (orderDetails.addOns && orderDetails.addOns.length > 0) {
-    const addOnPrices = {
-      'Photo Restoration': 15,
-      'Video Enhancement': 25,
-      'Digital Delivery': 10,
-      'Express Shipping': 20,
-      'Storage Upgrade': 35,
-      'Backup Copies': 15
-    };
-
-    orderDetails.addOns.forEach((addOn: string) => {
-      const price = addOnPrices[addOn as keyof typeof addOnPrices] || 0;
-      if (price > 0) {
+    orderDetails.addOns.forEach((addOnString: string) => {
+      // Parse strings like "1 USB Drive(s) - $24.95"
+      const match = addOnString.match(/^(\d+)\s*(.+?)\s*-\s*\$?([\d.]+)/);
+      if (match) {
+        const quantity = parseInt(match[1]);
+        const itemName = match[2].replace(/\(s\)$/, '').trim();
+        const unitPrice = parseFloat(match[3]);
+        
         orderItems.push({
-          productName: addOn,
-          productSKU: `ADDON-${addOn.toUpperCase().replace(/\s+/g, '-')}`,
-          quantity: 1,
-          unitPrice: price,
-          description: `${addOn} add-on service`
+          productName: itemName,
+          productSKU: `ADDON-${itemName.toUpperCase().replace(/\s+/g, '-')}`,
+          quantity: quantity,
+          unitPrice: unitPrice,
+          description: `${itemName} add-on service`
         });
       }
     });
   }
 
-  // Calculate total amount
-  const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  // Extract promo code and discount information
+  const promoCode = orderDetails.couponCode && orderDetails.couponCode !== 'None' ? orderDetails.couponCode : undefined;
+  
+  // Use the actual total amount that was charged (from totalAmount field)
+  const actualTotalAmount = parseFloat(orderDetails.totalAmount.replace('$', '').replace(',', ''));
+  
+  console.log('💰 AIRTABLE - Promo code:', promoCode);
+  console.log('💰 AIRTABLE - Actual total amount charged:', actualTotalAmount);
 
   return {
     customerInfo,
     orderItems,
-    totalAmount,
+    totalAmount: actualTotalAmount, // Use the actual amount charged (after discount)
+    promoCode: promoCode, // Include promo code
     paymentMethod: legacyOrderData.paymentMethod || 'Credit Card',
     timestamp: legacyOrderData.timestamp || new Date().toISOString(),
     orderDetails // Keep original details for reference
