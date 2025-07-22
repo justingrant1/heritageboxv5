@@ -215,9 +215,7 @@ const createOrder = async (customerId: string, orderData: any): Promise<string |
                 'Order Date': new Date().toISOString().split('T')[0], // YYYY-MM-DD format
                 'Status': 'Pending',
                 'Total Amount': orderData.totalAmount,
-                'Promo Code': orderData.promoCode || '',
-                'Payment Method': orderData.paymentMethod,
-                'Payment ID': orderData.paymentId || ''
+                'Promo Code': orderData.promoCode || ''
             }
         }]);
 
