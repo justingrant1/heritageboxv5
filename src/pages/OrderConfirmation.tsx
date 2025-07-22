@@ -15,14 +15,14 @@ declare global {
   }
 }
 
-// Function to generate sequential order number as fallback
+// Function to generate order number as fallback - Frontend fallback only
+// Note: The backend API should handle order number generation
 const generateOrderNumber = () => {
-  const baseNumber = 13405;
-  const storedCount = localStorage.getItem('hb_order_count');
-  const currentCount = storedCount ? parseInt(storedCount) : 0;
-  const newCount = currentCount + 1;
-  localStorage.setItem('hb_order_count', newCount.toString());
-  return `HB${(baseNumber + newCount - 1).toString().padStart(5, '0')}`;
+  // Frontend fallback uses simple incrementing from 100420
+  const timestamp = Date.now();
+  const increment = timestamp % 1000;
+  const baseNumber = 100420 + (increment - (increment % 5)); // Round to nearest 5
+  return baseNumber.toString();
 };
 
 const OrderConfirmation = () => {

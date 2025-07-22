@@ -65,11 +65,14 @@ interface OrderData {
   };
 }
 
-// Generate unique order number
+// Generate unique order number - Frontend fallback only
+// Note: The backend API should handle order number generation
 const generateOrderNumber = (): string => {
-  const timestamp = Date.now().toString();
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `HB${timestamp.slice(-6)}${random}`;
+  // Frontend fallback uses simple incrementing from 100420
+  const timestamp = Date.now();
+  const increment = timestamp % 1000; // Use timestamp modulo for some variation
+  const baseNumber = 100420 + (increment - (increment % 5)); // Round to nearest 5
+  return baseNumber.toString();
 };
 
 // Find or create customer by email

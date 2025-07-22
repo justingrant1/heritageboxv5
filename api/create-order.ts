@@ -31,11 +31,38 @@ if (AIRTABLE_API_KEY && AIRTABLE_BASE_ID) {
     }
 }
 
-// Generate unique order number
-const generateOrderNumber = (): string => {
-    const timestamp = Date.now().toString();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `HB${timestamp.slice(-6)}${random}`;
+// Generate unique order number starting from 100420, incrementing by 5
+const generateOrderNumber = async (): Promise<string> => {
+    if (!base) return `100420`; // Fallback if no database connection
+    
+    try {
+        // Get the latest order to find the current highest order number
+        const existingOrders = await base(ORDERS_TABLE).select({
+            fields: ['Order Number'],
+            sort: [{ field: 'Order Number', direction: 'desc' }],
+            maxRecords: 1
+        }).firstPage();
+        
+        let nextOrderNumber = 100420; // Starting number
+        
+        if (existingOrders.length > 0) {
+            const lastOrderNumber = existingOrders[0].get('Order Number');
+            if (lastOrderNumber && typeof lastOrderNumber === 'string') {
+                const currentNumber = parseInt(lastOrderNumber);
+                if (!isNaN(currentNumber) && currentNumber >= 100420) {
+                    nextOrderNumber = currentNumber + 5;
+                }
+            }
+        }
+        
+        return nextOrderNumber.toString();
+        
+    } catch (error) {
+        logEvent('order_number_generation_error', { error: error.message });
+        // Fallback to timestamp-based if database query fails
+        const timestamp = Date.now().toString();
+        return `100420${timestamp.slice(-3)}`;
+    }
 };
 
 // Find or create customer by email
@@ -204,7 +231,7 @@ const createOrder = async (customerId: string, orderData: any): Promise<string |
     if (!base) return null;
 
     try {
-        const orderNumber = generateOrderNumber();
+        const orderNumber = await generateOrderNumber();
         logEvent('airtable_order_create', { orderNumber, customerId });
 
         // Create the order
