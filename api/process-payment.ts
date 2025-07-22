@@ -141,8 +141,11 @@ export default async function handler(request: Request) {
                     hasOrderDetails: !!orderDetails
                 });
 
-                // Import Airtable utilities (we'll need to make this work in Edge runtime)
-                const airtableResponse = await fetch('/api/create-order', {
+                // Get the base URL from the current request
+                const url = new URL(request.url);
+                const baseUrl = `${url.protocol}//${url.host}`;
+                
+                const airtableResponse = await fetch(`${baseUrl}/api/create-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
