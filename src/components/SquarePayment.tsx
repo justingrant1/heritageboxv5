@@ -193,14 +193,13 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
 
         console.log("Creating card instance");
         
-        // Style to match the screenshot exactly
+        // Style to match the screenshot exactly - using only valid Square SDK properties
         const cardOptions: CardOptions = {
           style: {
             '.input-container': {
               borderRadius: '12px',
               borderColor: '#d1d5db',
-              borderWidth: '2px',
-              backgroundColor: 'white'
+              borderWidth: '2px'
             },
             '.input-container.is-focus': {
               borderColor: '#3b82f6'
@@ -210,9 +209,8 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
             },
             'input': {
               fontSize: '16px',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              color: '#374151',
-              backgroundColor: 'white'
+              fontFamily: 'Arial, sans-serif',
+              color: '#374151'
             },
             'input::placeholder': {
               color: '#9ca3af'
