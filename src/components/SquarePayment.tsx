@@ -301,14 +301,26 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
           <img src="/amex.svg" alt="American Express" className="h-8" />
         </div>
         
-        {/* Card Input Container */}
+        {/* Card Input Container - Always render the container for Square to attach */}
         <div className="space-y-4">
-          {(cardLoading && !card) || !loaded ? (
-            <div className={`${styles.cardContainer} flex items-center justify-center`}>
+          <div 
+            id="card-container" 
+            className={styles.cardContainer}
+            style={{ 
+              display: ((cardLoading && !card) || !loaded || error) ? 'none' : 'block' 
+            }}
+          />
+          
+          {/* Loading overlay */}
+          {((cardLoading && !card) || !loaded) && (
+            <div className={`${styles.cardContainer} ${styles.loadingContainer} flex items-center justify-center`}>
               <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
               <span className="ml-2 text-gray-500">Loading secure payment...</span>
             </div>
-          ) : error ? (
+          )}
+          
+          {/* Error overlay */}
+          {error && (
             <div className={`${styles.cardContainer} ${styles.errorContainer} flex flex-col items-center justify-center`}>
               <p className="font-medium">{error}</p>
               <Button
@@ -319,11 +331,6 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
                 Refresh Page
               </Button>
             </div>
-          ) : (
-            <div 
-              id="card-container" 
-              className={styles.cardContainer}
-            />
           )}
         </div>
         
