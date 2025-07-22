@@ -1168,31 +1168,12 @@ const Checkout = () => {
                       )}
                     </div>
                     
-                    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
-                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 text-white flex items-center justify-center rounded-xl">
-                          <CreditCard size={20} />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-bold text-gray-900">Payment Information</h2>
-                          <p className="text-sm text-gray-500">Secure payment processing</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <SquarePayment 
-                          onSuccess={handlePaymentSuccess}
-                          buttonColorClass={getButtonClass()}
-                          isProcessing={isProcessing}
-                          amount={`$${calculateTotal()}`}
-                        />
-                        
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-4 border-t border-gray-100">
-                          <Lock size={16} className="text-green-600" />
-                          <span>Your payment information is secure and encrypted with 256-bit SSL</span>
-                        </div>
-                      </div>
-                    </div>
+                    <SquarePayment 
+                      onSuccess={handlePaymentSuccess}
+                      buttonColorClass={getButtonClass()}
+                      isProcessing={isProcessing}
+                      amount={`$${calculateTotal()}`}
+                    />
                   </div>
                 )}
               </div>

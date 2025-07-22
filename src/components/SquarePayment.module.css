@@ -5,16 +5,16 @@
 }
 
 .cardContainer {
-  /* Square iframe container - matches screenshot styling */
+  /* Square iframe container - mobile-first design like the image */
   position: relative;
   width: 100%;
-  min-height: 80px;
-  padding: 20px;
+  min-height: 120px;
+  padding: 16px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #fafafa;
+  border: 2px solid #d1d5db;
+  background: white;
   transition: all 0.2s ease;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .cardContainer:focus-within {

@@ -361,40 +361,50 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   };
 
   return (
-    <div className={`${styles.squarePaymentContainer}`}>
-      {/* Card Information Header */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-8 h-8 bg-gray-800 text-white flex items-center justify-center rounded-lg mt-1">
-          <CardIcon size={16} />
+    <div className="max-w-lg mx-auto bg-white">
+      {/* Secure Payment Processing Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-green-500 text-white flex items-center justify-center rounded-full">
+          <ShieldCheck size={20} />
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Card Information</h3>
+        <span className="text-lg font-medium text-gray-700">Secure payment processing</span>
+      </div>
+      
+      {/* Card Information Section */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-gray-700 text-white flex items-center justify-center rounded-xl">
+            <CardIcon size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Card Information</h2>
+            <p className="text-gray-600">Enter your card details below</p>
+          </div>
         </div>
-      </div>
-      
-      {/* Card Input Container */}
-      <div className="mb-6">
-        {renderCardContainer()}
-      </div>
-      
-      {/* Credit Cards Accepted Link */}
-      <div className="mb-6">
-        <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors text-sm">
+        
+        {/* Credit Card Logos */}
+        <div className="flex items-center gap-4 mb-6">
+          <img src="/mastercard.svg" alt="MasterCard" className="h-8" />
+          <img src="/visa.svg" alt="Visa" className="h-8" />
+          <img src="/amex.svg" alt="American Express" className="h-8" />
+        </div>
+        
+        {/* Card Input Container */}
+        <div className="space-y-4">
+          {renderCardContainer()}
+        </div>
+        
+        {/* All Major Credit Cards Accepted */}
+        <div className="flex items-center gap-2 text-gray-600 mt-4">
           <CardIcon size={16} />
-          <span>All major credit cards accepted</span>
-        </button>
-      </div>
-      
-      {/* Security Message */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <ShieldCheck size={16} className="text-green-600" />
-        <span>Your payment information is secure and encrypted with 256-bit SSL</span>
+          <span className="text-sm">All major credit cards accepted</span>
+        </div>
       </div>
       
       {/* Pay Button */}
       <Button
         onClick={handlePaymentSubmit}
-        className={`w-full h-14 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3`}
+        className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 mb-6"
         disabled={isProcessing || !card || !!error}
       >
         {isProcessing ? (
@@ -410,8 +420,30 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         )}
       </Button>
       
+      {/* Security Badges */}
+      <div className="flex items-center justify-around mb-6 py-4">
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 bg-green-500 text-white flex items-center justify-center rounded-full mb-2">
+            <ShieldCheck size={16} />
+          </div>
+          <span className="text-sm text-gray-600 text-center">SSL Secured</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 bg-green-500 text-white flex items-center justify-center rounded-full mb-2">
+            <ShieldCheck size={16} />
+          </div>
+          <span className="text-sm text-gray-600 text-center">Powered by<br/>Square</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 bg-green-500 text-white flex items-center justify-center rounded-full mb-2">
+            <ShieldCheck size={16} />
+          </div>
+          <span className="text-sm text-gray-600 text-center">PCI Compliant</span>
+        </div>
+      </div>
+      
       {/* Bottom Security Message */}
-      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-4">
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-600 text-center">
         <ShieldCheck size={16} className="text-green-600" />
         <span>Your payment information is secure and encrypted with 256-bit SSL</span>
       </div>
