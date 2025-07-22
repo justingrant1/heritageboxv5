@@ -1,5 +1,5 @@
 export const config = {
-    runtime: 'nodejs18.x', // Use Node.js runtime for Airtable SDK
+    runtime: 'nodejs', // Use Node.js runtime for Airtable SDK
 };
 
 import Airtable from 'airtable';
