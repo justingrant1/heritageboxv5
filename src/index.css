@@ -79,6 +79,18 @@
     /* Improve touch responsiveness */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+  }
+
+  html {
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+  }
+
+  /* Ensure no elements extend beyond viewport */
+  * {
+    box-sizing: border-box;
   }
 
   /* Improve button touch targets on mobile */
