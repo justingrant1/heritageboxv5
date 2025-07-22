@@ -133,11 +133,47 @@ export default async function handler(request: Request) {
             status: result.payment?.status
         });
 
-        // Here you would typically:
-        // 1. Save the order details to your database
-        // 2. Send confirmation emails
-        // 3. Update inventory
-        // 4. etc.
+        // Save the order to Airtable
+        if (orderDetails) {
+            try {
+                logEvent('airtable_integration_started', {
+                    paymentId: result.payment?.id,
+                    hasOrderDetails: !!orderDetails
+                });
+
+                // Import Airtable utilities (we'll need to make this work in Edge runtime)
+                const airtableResponse = await fetch('/api/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        orderDetails,
+                        paymentId: result.payment?.id,
+                        paymentStatus: result.payment?.status,
+                        actualAmount: result.payment?.amount_money?.amount / 100 // Convert back from cents
+                    })
+                });
+
+                if (airtableResponse.ok) {
+                    logEvent('airtable_integration_success', {
+                        paymentId: result.payment?.id
+                    });
+                } else {
+                    const airtableError = await airtableResponse.text();
+                    logEvent('airtable_integration_failed', {
+                        paymentId: result.payment?.id,
+                        error: airtableError
+                    });
+                }
+            } catch (error) {
+                logEvent('airtable_integration_error', {
+                    paymentId: result.payment?.id,
+                    error: error.message
+                });
+                // Don't fail the payment if Airtable fails
+            }
+        }
 
         return new Response(JSON.stringify({
             success: true,

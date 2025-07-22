@@ -446,6 +446,49 @@ const Checkout = () => {
       if (!validatedFormData) {
         throw new Error('Missing customer information - form data not validated');
       }
+
+      // Prepare complete order details BEFORE payment processing
+      const currentDigitizingOption = getSelectedDigitizingOption();
+      
+      // Create add-ons array for legacy support
+      const currentAddOnsArray = [];
+      if (usbDrives > 0) {
+        currentAddOnsArray.push(`${usbDrives} USB Drive(s) - $${(usbDrives * USB_DRIVE_PRICE).toFixed(2)}`);
+      }
+      if (cloudBackup > 0) {
+        currentAddOnsArray.push(`${cloudBackup} Year Cloud Backup - $0.00 (Included)`);
+      }
+
+      // Create complete order details object for payment API
+      const completeOrderDetails = {
+        customerInfo: {
+          firstName: validatedFormData.firstName,
+          lastName: validatedFormData.lastName,
+          email: validatedFormData.email,
+          phone: validatedFormData.phone,
+          address: validatedFormData.address,
+          city: validatedFormData.city,
+          state: validatedFormData.state,
+          zipCode: validatedFormData.zipCode,
+          fullName: `${validatedFormData.firstName} ${validatedFormData.lastName}`
+        },
+        orderDetails: {
+          package: packageType,
+          packagePrice: `$${packageDetails.numericPrice.toFixed(2)}`,
+          packageFeatures: packageDetails.features.join(", "),
+          subtotal: `$${calculateSubtotal().toFixed(2)}`,
+          couponCode: appliedCoupon || 'None',
+          discountPercent: couponDiscount,
+          discountAmount: `$${(calculateSubtotal() * (couponDiscount / 100)).toFixed(2)}`,
+          totalAmount: `$${calculateTotal()}`,
+          digitizingSpeed: currentDigitizingOption.name,
+          digitizingTime: currentDigitizingOption.time,
+          digitizingPrice: currentDigitizingOption.price === 0 ? "Free" : `$${currentDigitizingOption.price.toFixed(2)}`,
+          addOns: currentAddOnsArray
+        }
+      };
+
+      console.log('💳 PAYMENT SUCCESS - Complete order details for payment API:', completeOrderDetails);
       
       const response = await fetch('/api/process-payment', {
         method: 'POST',
@@ -455,13 +498,7 @@ const Checkout = () => {
         body: JSON.stringify({
           token,
           amount: parseFloat(calculateTotal()),
-          orderDetails: {
-            package: packageType,
-            usbDrives,
-            cloudBackup,
-            digitizingSpeed,
-            customerInfo: validatedFormData
-          }
+          orderDetails: completeOrderDetails
         }),
       });
 
