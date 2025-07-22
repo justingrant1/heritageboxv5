@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -20,12 +19,24 @@ interface CardOptions {
       borderRadius?: string;
       borderColor?: string;
       borderWidth?: string;
+      backgroundColor?: string;
+      boxShadow?: string;
     };
     '.input-container.is-focus'?: {
       borderColor?: string;
+      boxShadow?: string;
     };
     '.input-container.is-error'?: {
       borderColor?: string;
+    };
+    'input'?: {
+      fontSize?: string;
+      fontFamily?: string;
+      color?: string;
+      backgroundColor?: string;
+    };
+    'input::placeholder'?: {
+      color?: string;
     };
   };
 }
@@ -66,22 +77,17 @@ const getSquareConfig = () => {
   let locationId;
 
   if (isProduction) {
-    // In production, we must have the production credentials.
     appId = import.meta.env.VITE_SQUARE_APP_ID;
     locationId = import.meta.env.VITE_SQUARE_LOCATION_ID;
   } else {
-    // In development, we can use sandbox credentials as a fallback.
     appId = import.meta.env.VITE_SQUARE_APP_ID || 'sq0idp-1Zchx5RshtaZ74spcf2w0A';
     locationId = import.meta.env.VITE_SQUARE_LOCATION_ID || 'LPFZYDYB5G5GM';
   }
 
   if (!appId || !locationId) {
     console.error("Square configuration is missing. Ensure VITE_SQUARE_APP_ID and VITE_SQUARE_LOCATION_ID are set in your .env file for the current environment.");
-    // Return empty strings to prevent initialization with incorrect credentials.
     return { appId: '', locationId: '', jsUrl: 'https://web.squarecdn.com/v1/square.js' };
   }
-  
-  console.log('Square Config:', { appId, locationId, mode: import.meta.env.MODE });
   
   return {
     appId,
@@ -90,18 +96,11 @@ const getSquareConfig = () => {
   };
 };
 
-// Mobile detection utility
-const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-         (window.innerWidth <= 768);
-};
-
 const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: SquarePaymentProps) => {
   const [loaded, setLoaded] = useState(false);
   const [card, setCard] = useState<SquareCard | null>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile] = useState(isMobileDevice());
   const [config] = useState(getSquareConfig());
 
   // Cleanup function to destroy card instance
@@ -116,13 +115,11 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   };
 
   useEffect(() => {
-    // Clean up any previous script instances to prevent conflicts
     const existingScript = document.getElementById('square-script');
     if (existingScript) {
       document.body.removeChild(existingScript);
     }
 
-    // Load the Square Web Payments SDK
     const script = document.createElement('script');
     script.id = 'square-script';
     script.src = config.jsUrl;
@@ -161,18 +158,12 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         const errorMessage = "Payment provider is not configured. Please contact support.";
         console.error(errorMessage);
         setError(errorMessage);
-        toast.error("Payment Error", {
-          description: errorMessage,
-        });
         return;
       }
       
       if (!window.Square) {
         console.error("Square SDK not available");
         setError("Payment processor not available");
-        toast.error("Payment processor not available", {
-          description: "Please refresh the page and try again",
-        });
         return;
       }
 
@@ -180,7 +171,6 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         setCardLoading(true);
         console.log("Initializing Square Payments:", config);
 
-        // Wait for container to be in DOM before proceeding
         const waitForContainer = () => {
           return new Promise((resolve, reject) => {
             const checkContainer = () => {
@@ -193,50 +183,51 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
             };
             checkContainer();
             
-            // Timeout after 5 seconds to avoid infinite waiting
             setTimeout(() => reject(new Error('Container timeout')), 5000);
           });
         };
 
         await waitForContainer();
 
-        // Initialize with environment-aware configuration
         const payments = window.Square.payments(config.appId, config.locationId);
 
-        console.log("Creating card instance with mobile optimization");
+        console.log("Creating card instance");
         
-        // Minimal card configuration with only confirmed valid Square SDK styles
+        // Style to match the screenshot exactly
         const cardOptions: CardOptions = {
           style: {
             '.input-container': {
-              borderRadius: '8px',
-              borderColor: '#D1D5DB',
-              borderWidth: '1px'
+              borderRadius: '12px',
+              borderColor: '#d1d5db',
+              borderWidth: '2px',
+              backgroundColor: 'white'
             },
             '.input-container.is-focus': {
-              borderColor: '#3B82F6'
+              borderColor: '#3b82f6'
             },
             '.input-container.is-error': {
-              borderColor: '#EF4444'
+              borderColor: '#ef4444'
+            },
+            'input': {
+              fontSize: '16px',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              color: '#374151',
+              backgroundColor: 'white'
+            },
+            'input::placeholder': {
+              color: '#9ca3af'
             }
           }
         };
 
         const cardInstance = await payments.card(cardOptions);
 
-        // Double-check container is still available
         const container = document.getElementById('card-container');
         if (!container) {
           throw new Error('Card container not found in DOM');
         }
 
-        // Add mobile-specific attributes to container
-        if (isMobile) {
-          container.style.minHeight = '120px';
-          container.setAttribute('data-mobile', 'true');
-        }
-
-        console.log("Attaching card to container with mobile support");
+        console.log("Attaching card to container");
         await cardInstance.attach('#card-container');
         console.log("Card attached successfully");
 
@@ -253,9 +244,8 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       }
     }
 
-    // Small delay to ensure DOM is ready
     setTimeout(initializeCard, 100);
-  }, [loaded, card, config, isMobile]);
+  }, [loaded, card, config]);
 
   const handlePaymentSubmit = async () => {
     if (!card) {
@@ -282,84 +272,6 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     }
   };
 
-  const renderCardContainer = () => {
-    const showLoadingState = (cardLoading && !card) || !loaded;
-    const showErrorState = error && !cardLoading;
-    
-    return (
-      <div className="space-y-3">
-        {/* Always render the card container for Square to attach to */}
-        <div 
-          id="card-container" 
-          className={`${styles.cardContainer} relative`}
-          data-mobile={isMobile ? 'true' : 'false'}
-          style={{
-            // Hide the container when showing loading or error states
-            display: showLoadingState || showErrorState ? 'none' : 'block',
-            // Additional mobile optimizations
-            ...(isMobile && {
-              touchAction: 'manipulation',
-              WebkitUserSelect: 'text',
-              userSelect: 'text'
-            })
-          }}
-        />
-        
-        {/* Loading state overlay */}
-        {showLoadingState && (
-          <div className={`${styles.cardContainer} ${isMobile ? styles.mobileLoadingContainer : ''} flex items-center justify-center`}>
-            <Loader2 className={`h-6 w-6 animate-spin text-gray-500 ${styles.loadingSpinner}`} />
-            <span className="ml-2 text-gray-500">
-              {isMobile ? 'Loading secure payment...' : 'Loading payment form...'}
-            </span>
-          </div>
-        )}
-
-        {/* Error state overlay */}
-        {showErrorState && (
-          <div className={`${styles.errorContainer} ${styles.cardContainer} flex flex-col items-center justify-center`}>
-            <p className="font-medium">{error}</p>
-            <p className="text-sm mt-2 text-center">
-              {isMobile 
-                ? "Please refresh the page or try a different browser" 
-                : "Please refresh the page or try a different browser"
-              }
-            </p>
-            <Button
-              onClick={() => window.location.reload()}
-              variant="outline"
-              className="mt-4"
-            >
-              Refresh Page
-            </Button>
-          </div>
-        )}
-
-        {/* Success state info */}
-        {loaded && !showLoadingState && !showErrorState && (
-          <>
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <div className="flex items-center">
-                <CardIcon size={14} className="mr-1" />
-                <span>All major credit cards accepted</span>
-              </div>
-              {isMobile && (
-                <div className={`text-green-600 font-medium ${styles.successIndicator}`}>
-                  <span>Autocomplete enabled</span>
-                </div>
-              )}
-            </div>
-            {isMobile && (
-              <div className={`${styles.autocompleteHint}`}>
-                💡 Tip: Your browser should offer to save and autofill card information for faster checkout.
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="max-w-lg mx-auto bg-white">
       {/* Secure Payment Processing Header */}
@@ -383,7 +295,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         </div>
         
         {/* Credit Card Logos */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6 justify-center">
           <img src="/mastercard.svg" alt="MasterCard" className="h-8" />
           <img src="/visa.svg" alt="Visa" className="h-8" />
           <img src="/amex.svg" alt="American Express" className="h-8" />
@@ -391,11 +303,32 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         
         {/* Card Input Container */}
         <div className="space-y-4">
-          {renderCardContainer()}
+          {(cardLoading && !card) || !loaded ? (
+            <div className={`${styles.cardContainer} flex items-center justify-center`}>
+              <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              <span className="ml-2 text-gray-500">Loading secure payment...</span>
+            </div>
+          ) : error ? (
+            <div className={`${styles.cardContainer} ${styles.errorContainer} flex flex-col items-center justify-center`}>
+              <p className="font-medium">{error}</p>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="mt-4"
+              >
+                Refresh Page
+              </Button>
+            </div>
+          ) : (
+            <div 
+              id="card-container" 
+              className={styles.cardContainer}
+            />
+          )}
         </div>
         
         {/* All Major Credit Cards Accepted */}
-        <div className="flex items-center gap-2 text-gray-600 mt-4">
+        <div className="flex items-center justify-center gap-2 text-gray-600 mt-4">
           <CardIcon size={16} />
           <span className="text-sm">All major credit cards accepted</span>
         </div>

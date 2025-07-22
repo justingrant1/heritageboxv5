@@ -1,157 +1,166 @@
-/* Square Payment Component */
+/* Square Payment Component Styles */
+
 .squarePaymentContainer {
-  /* Ensure proper interaction */
-  touch-action: manipulation;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background-color: white;
+  padding: 0;
 }
 
 .cardContainer {
-  /* Square iframe container - mobile-first design like the image */
-  position: relative;
-  width: 100%;
   min-height: 120px;
-  padding: 16px;
+  width: 100%;
+  background: white;
   border-radius: 12px;
   border: 2px solid #d1d5db;
-  background: white;
-  transition: all 0.2s ease;
-  margin-bottom: 16px;
+  padding: 20px;
+  margin: 16px 0;
+  box-sizing: border-box;
+  position: relative;
+  
+  /* Mobile optimizations */
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: manipulation;
 }
 
 .cardContainer:focus-within {
   border-color: #3b82f6;
-  background: white;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.cardContainer[data-mobile="true"] {
-  min-height: 120px;
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #ef4444;
+  border-color: #ef4444;
+  background-color: #fef2f2;
 }
 
-/* Ensure the Square iframe works properly */
+.loadingSpinner {
+  color: #6b7280;
+}
+
+.mobileLoadingContainer {
+  min-height: 100px;
+  padding: 24px;
+}
+
+.successIndicator {
+  font-size: 12px;
+  color: #10b981;
+}
+
+.autocompleteHint {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  padding: 8px 12px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  margin-top: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Square SDK iframe styling overrides */
 .cardContainer iframe {
+  border: none !important;
+  border-radius: 8px !important;
   width: 100% !important;
-  height: 100% !important;
-  border: none;
-  background: transparent;
+  min-height: 60px !important;
 }
 
-/* iOS zoom prevention for inputs */
-.cardContainer input,
-.cardContainer input[type="text"],
-.cardContainer input[type="tel"] {
-  font-size: 16px !important;
-  -webkit-appearance: none;
-}
-
-/* Mobile specific styling to help with autocomplete */
+/* Mobile-specific adjustments */
 @media (max-width: 768px) {
   .cardContainer {
-    /* Ensure proper viewport behavior */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    
-    /* Enable hardware acceleration */
-    will-change: transform;
-    
-    /* Improve scrolling performance */
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* Style for mobile payment button */
-  .mobilePayButton {
-    min-height: 50px;
-    font-size: 16px; /* Prevent zoom on iOS */
-    -webkit-appearance: none;
-    border-radius: 12px;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  /* Mobile loading states */
-  .mobileLoadingContainer {
-    padding: 20px;
-    text-align: center;
-  }
-  
-  /* Mobile autocomplete hint styling */
-  .autocompleteHint {
-    font-size: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    margin-top: 12px;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    color: rgb(37, 99, 235);
-  }
-}
-
-/* Desktop optimizations */
-@media (min-width: 769px) {
-  .cardContainer {
-    min-height: 110px;
-  }
-  
-  .desktopSecurityInfo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #6b7280;
-  }
-}
-
-
-/* Loading state optimizations */
-.loadingSpinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Error state styling */
-.errorContainer {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
-
-/* Success indicators */
-.successIndicator {
-  color: #059669;
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* Responsive adjustments for very small screens */
-@media (max-width: 480px) {
-  .cardContainer {
-    min-height: 130px;
-    padding: 4px;
-  }
-  
-  .mobilePayButton {
-    width: 100%;
+    min-height: 100px;
     padding: 16px;
-    font-size: 16px;
-    font-weight: 600;
+    border-width: 2px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .cardContainer iframe {
+    min-height: 80px !important;
+  }
+  
+  .squarePaymentContainer {
+    padding: 0 4px;
+  }
+  
+  .mobileLoadingContainer {
+    min-height: 80px;
+    padding: 20px;
   }
   
   .autocompleteHint {
     font-size: 11px;
     padding: 6px 10px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .cardContainer {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  .cardContainer input {
+    font-size: 16px !important; /* Prevent iOS zoom */
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cardContainer {
+    border-width: 3px;
+    border-color: #000;
+  }
+  
+  .cardContainer:focus-within {
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .loadingSpinner {
+    animation: none;
+  }
+  
+  .cardContainer {
+    transition: none;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .cardContainer {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: white;
+  }
+  
+  .cardContainer:focus-within {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+  }
+  
+  .errorContainer {
+    background-color: #7f1d1d;
+    border-color: #dc2626;
+    color: #fecaca;
+  }
+  
+  .autocompleteHint {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
   }
 }
