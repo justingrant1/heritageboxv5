@@ -48,7 +48,6 @@ const App = () => (
             <Route path="/about" element={<AboutUs />} />
             
             {/* Service combination pages (must come before single service pages) */}
-            <Route path="/services/:serviceCombination/:locationSlug" element={<ServiceCombinationPage />} />
             <Route path="/services/:serviceSlug/:locationSlug" element={<ServiceCombinationPage />} />
             <Route path="/services/:serviceSlug" element={<ServicePage />} />
             

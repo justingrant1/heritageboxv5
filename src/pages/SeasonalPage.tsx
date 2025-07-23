@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { getSeasonalContentBySlug, SeasonalContent } from '../data/seasonalContent';
 import { Button } from '../components/ui/button';
@@ -9,6 +9,7 @@ import { Clock, MapPin, Gift, Star, CheckCircle } from 'lucide-react';
 
 const SeasonalPage: React.FC = () => {
   const { seasonalSlug } = useParams<{ seasonalSlug: string }>();
+  const navigate = useNavigate();
   
   if (!seasonalSlug) {
     return <div>Seasonal content not found</div>;
@@ -30,6 +31,22 @@ const SeasonalPage: React.FC = () => {
     serviceName,
     locationName
   } = seasonalContent;
+
+  const handleGetStarted = () => {
+    navigate('/');
+  };
+
+  const handleCallNow = () => {
+    window.open('tel:1-800-HERITAGE', '_self');
+  };
+
+  const handleStartOrder = () => {
+    navigate('/');
+  };
+
+  const handleGetQuote = () => {
+    navigate('/contact');
+  };
 
   const getSeasonColor = (season: string) => {
     switch (season) {
@@ -97,12 +114,21 @@ const SeasonalPage: React.FC = () => {
                   {/* CTA Buttons */}
                   <div className="mt-8 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
                     <div className="rounded-md shadow">
-                      <Button size="lg" className="w-full flex items-center justify-center px-8 py-3 text-base font-medium">
+                      <Button 
+                        size="lg" 
+                        className="w-full flex items-center justify-center px-8 py-3 text-base font-medium"
+                        onClick={handleGetStarted}
+                      >
                         Get Started Today
                       </Button>
                     </div>
                     <div className="mt-3 sm:mt-0 sm:ml-3">
-                      <Button variant="outline" size="lg" className="w-full flex items-center justify-center px-8 py-3 text-base font-medium">
+                      <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="w-full flex items-center justify-center px-8 py-3 text-base font-medium"
+                        onClick={handleCallNow}
+                      >
                         Call 1-800-HERITAGE
                       </Button>
                     </div>
@@ -269,10 +295,20 @@ const SeasonalPage: React.FC = () => {
               Don't wait - {content.urgencyMessage.toLowerCase()}
             </p>
             <div className="mt-8 flex justify-center space-x-4">
-              <Button size="lg" variant="secondary" className="px-8 py-3">
+              <Button 
+                size="lg" 
+                variant="secondary" 
+                className="px-8 py-3"
+                onClick={handleStartOrder}
+              >
                 Start Your Order
               </Button>
-              <Button size="lg" variant="outline" className="px-8 py-3 text-white border-white hover:bg-white hover:text-blue-600">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="px-8 py-3 text-white border-white hover:bg-white hover:text-blue-600"
+                onClick={handleGetQuote}
+              >
                 Get Free Quote
               </Button>
             </div>

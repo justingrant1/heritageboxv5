@@ -36,10 +36,10 @@ export const generateServiceCombinations = (): ServiceCombination[] => {
     ['VHS', 'Photos', '8mm Film', 'Hi8', 'MiniDV'].includes(service.formatType)
   );
   
-  const topMarkets = allLocationData.filter(location => 
-    location.marketInsights.digitalAdoption === 'high' || 
-    location.population > 7000000
-  );
+  // Use top 15 locations by population to ensure we generate pages
+  const topMarkets = allLocationData
+    .sort((a, b) => b.population - a.population)
+    .slice(0, 15);
 
   topServices.forEach(service => {
     topMarkets.forEach(location => {
