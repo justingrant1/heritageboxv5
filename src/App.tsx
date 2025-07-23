@@ -43,15 +43,32 @@ const App = () => (
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
-            {/* Programmatic SEO Routes */}
-            <Route path="/services/:serviceSlug" element={<ServicePage />} />
+            {/* Programmatic SEO Routes - Order matters! */}
+            {/* Static pages first */}
+            <Route path="/about" element={<AboutUs />} />
+            
+            {/* Service combination pages (must come before single service pages) */}
+            <Route path="/services/:serviceCombination/:locationSlug" element={<ServiceCombinationPage />} />
             <Route path="/services/:serviceSlug/:locationSlug" element={<ServiceCombinationPage />} />
+            <Route path="/services/:serviceSlug" element={<ServicePage />} />
+            
+            {/* Location pages */}
             <Route path="/locations/:state" element={<LocationPage />} />
-            <Route path="/locations/:state/:city" element={<LocationPage />} />
-            <Route path="/compare/:comparisonSlug" element={<ComparisonPage />} />
-            <Route path="/guides/:guideSlug" element={<GuidePage />} />
+            
+            {/* City pages */}
+            <Route path="/cities/:citySlug/:serviceSlug" element={<CityPage />} />
             <Route path="/cities/:citySlug" element={<CityPage />} />
+            
+            {/* Comparison pages */}
+            <Route path="/compare/:comparisonSlug" element={<ComparisonPage />} />
+            
+            {/* Guide pages */}
+            <Route path="/guides/:guideSlug" element={<GuidePage />} />
+            
+            {/* Seasonal pages */}
             <Route path="/seasonal/:seasonalSlug" element={<SeasonalPage />} />
+            
+            {/* Interactive tools */}
             <Route path="/tools/:toolSlug" element={<InteractiveToolPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

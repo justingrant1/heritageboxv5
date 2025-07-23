@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { MapPin, Clock, Truck, Shield, Star, Users, TrendingUp } from 'lucide-react';
 
 export const CityPage: React.FC = () => {
-  const { citySlug } = useParams<{ citySlug: string }>();
+  const { citySlug, serviceSlug } = useParams<{ citySlug: string; serviceSlug?: string }>();
   
   if (!citySlug) {
     return <Navigate to="/404" replace />;
@@ -21,13 +21,37 @@ export const CityPage: React.FC = () => {
     return <Navigate to="/404" replace />;
   }
 
-  const topServices = serviceFormats.slice(0, 5); // Show top 5 services
+  // If serviceSlug is provided, find the specific service
+  const specificService = serviceSlug 
+    ? serviceFormats.find(s => s.formatType.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') === serviceSlug)
+    : null;
+
+  // If serviceSlug provided but service not found, redirect to 404
+  if (serviceSlug && !specificService) {
+    return <Navigate to="/404" replace />;
+  }
+
+  const topServices = specificService ? [specificService] : serviceFormats.slice(0, 5);
+  const isServiceSpecific = !!specificService;
 
   const seoData = {
-    title: `${city.displayName} Digitization Services | HeritageBox`,
-    description: `Professional digitization services in ${city.displayName}. VHS conversion, photo scanning, and media preservation for ${city.city} residents. ${city.shippingInfo.averageTransitTime} shipping.`,
-    keywords: city.seoData.keywords,
-    canonicalUrl: `https://heritagebox.com/cities/${citySlug}`,
+    title: isServiceSpecific 
+      ? `${specificService!.displayName} in ${city.displayName} | HeritageBox`
+      : `${city.displayName} Digitization Services | HeritageBox`,
+    description: isServiceSpecific
+      ? `Professional ${specificService!.displayName.toLowerCase()} in ${city.displayName}. ${specificService!.shortDescription} Fast ${city.shippingInfo.averageTransitTime} shipping to ${city.city}.`
+      : `Professional digitization services in ${city.displayName}. VHS conversion, photo scanning, and media preservation for ${city.city} residents. ${city.shippingInfo.averageTransitTime} shipping.`,
+    keywords: isServiceSpecific
+      ? [
+          ...city.seoData.keywords,
+          `${specificService!.formatType.toLowerCase()} ${city.city.toLowerCase()}`,
+          `${specificService!.displayName.toLowerCase()} ${city.city.toLowerCase()}`,
+          `${specificService!.formatType.toLowerCase()} conversion ${city.city.toLowerCase()}`
+        ]
+      : city.seoData.keywords,
+    canonicalUrl: isServiceSpecific
+      ? `https://heritagebox.com/cities/${citySlug}/${serviceSlug}`
+      : `https://heritagebox.com/cities/${citySlug}`,
     schema: {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
