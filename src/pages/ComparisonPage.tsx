@@ -1,14 +1,23 @@
 import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { getComparisonPage } from '../data/comparisonPages';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { CheckCircle, X, Star, Shield, Trophy, Users, Clock, Phone } from 'lucide-react';
+import { 
+  navigateToCheckout, 
+  openPhoneCall, 
+  requestQuote, 
+  bookConsultation,
+  shareOnSocial,
+  submitFeedback 
+} from '../utils/navigationUtils';
 
 const ComparisonPage: React.FC = () => {
   const { comparisonSlug } = useParams<{ comparisonSlug: string }>();
+  const navigate = useNavigate();
 
   if (!comparisonSlug) {
     return <Navigate to="/404" replace />;
@@ -21,7 +30,29 @@ const ComparisonPage: React.FC = () => {
   }
 
   const handleGetStarted = () => {
-    window.location.href = '/checkout';
+    navigateToCheckout(navigate);
+  };
+
+  const handleCallForQuestions = () => {
+    openPhoneCall();
+  };
+
+  const handleGetQuote = () => {
+    requestQuote(comparison.serviceName, comparison.locationName);
+  };
+
+  const handleBookConsultation = () => {
+    bookConsultation(comparison.serviceName);
+  };
+
+  const handleShareComparison = (platform: 'facebook' | 'twitter' | 'linkedin') => {
+    const url = `https://heritagebox.com/compare/${comparisonSlug}`;
+    const title = comparison.seoData.title;
+    shareOnSocial(platform, url, title);
+  };
+
+  const handleFeedback = () => {
+    submitFeedback('comparison', comparisonSlug);
   };
 
   const getAdvantageIcon = (advantage: 'heritageBox' | 'competitor' | 'tie') => {
@@ -79,7 +110,7 @@ const ComparisonPage: React.FC = () => {
                 <Button size="lg" onClick={handleGetStarted} className="bg-blue-600 hover:bg-blue-700">
                   Choose HeritageBox
                 </Button>
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" onClick={handleCallForQuestions}>
                   <Phone className="w-4 h-4 mr-2" />
                   Call for Questions
                 </Button>
@@ -265,8 +296,21 @@ const ComparisonPage: React.FC = () => {
                 <Clock className="w-4 h-4 mr-2" />
                 Start Your Order
               </Button>
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-blue-600">
+              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-blue-600" onClick={handleGetQuote}>
                 Get Free Quote
+              </Button>
+            </div>
+            
+            {/* Additional Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={handleBookConsultation}>
+                Book Free Consultation
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={() => handleShareComparison('facebook')}>
+                Share This Comparison
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={handleFeedback}>
+                Give Feedback
               </Button>
             </div>
             <p className="text-sm mt-6 opacity-90">

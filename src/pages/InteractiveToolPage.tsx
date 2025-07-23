@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { getInteractiveToolBySlug, InteractiveTool, ToolInput } from '../data/interactiveTools';
 import { Button } from '../components/ui/button';
@@ -10,9 +10,18 @@ import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Calculator, Clock, DollarSign, CheckCircle, Star, TrendingUp } from 'lucide-react';
+import { 
+  navigateToCheckout, 
+  openPhoneCall, 
+  requestQuote, 
+  bookConsultation,
+  shareOnSocial,
+  submitFeedback 
+} from '../utils/navigationUtils';
 
 const InteractiveToolPage: React.FC = () => {
   const { toolSlug } = useParams<{ toolSlug: string }>();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [results, setResults] = useState<{ [key: string]: any }>({});
   const [showResults, setShowResults] = useState(false);
@@ -34,6 +43,32 @@ const InteractiveToolPage: React.FC = () => {
     businessData,
     type
   } = tool;
+
+  const handleGetStarted = () => {
+    navigateToCheckout(navigate);
+  };
+
+  const handleGetExpertHelp = () => {
+    openPhoneCall();
+  };
+
+  const handleGetQuote = () => {
+    requestQuote('Media Digitization');
+  };
+
+  const handleBookConsultation = () => {
+    bookConsultation('Media Digitization');
+  };
+
+  const handleShareTool = (platform: 'facebook' | 'twitter' | 'linkedin') => {
+    const url = `https://heritagebox.com/tools/${toolSlug}`;
+    const title = seoData.title;
+    shareOnSocial(platform, url, title);
+  };
+
+  const handleFeedback = () => {
+    submitFeedback('tool', toolSlug);
+  };
 
   // Initialize form data with default values
   useEffect(() => {
@@ -385,7 +420,7 @@ const InteractiveToolPage: React.FC = () => {
                       })}
                       
                       <div className="pt-4 border-t">
-                        <Button className="w-full" size="lg">
+                        <Button className="w-full" size="lg" onClick={handleGetStarted}>
                           {content.ctaMessage}
                         </Button>
                       </div>
@@ -449,11 +484,27 @@ const InteractiveToolPage: React.FC = () => {
               {content.ctaMessage}
             </p>
             <div className="mt-8 flex justify-center space-x-4">
-              <Button size="lg" variant="secondary" className="px-8 py-3">
+              <Button size="lg" variant="secondary" className="px-8 py-3" onClick={handleGetStarted}>
                 Start Your Project
               </Button>
-              <Button size="lg" variant="outline" className="px-8 py-3 text-white border-white hover:bg-white hover:text-blue-600">
+              <Button size="lg" variant="outline" className="px-8 py-3 text-white border-white hover:bg-white hover:text-blue-600" onClick={handleGetExpertHelp}>
                 Get Expert Help
+              </Button>
+            </div>
+            
+            {/* Additional Action Buttons */}
+            <div className="mt-4 flex justify-center space-x-2">
+              <Button size="sm" variant="ghost" className="text-blue-200 hover:bg-white hover:bg-opacity-20" onClick={handleGetQuote}>
+                Get Free Quote
+              </Button>
+              <Button size="sm" variant="ghost" className="text-blue-200 hover:bg-white hover:bg-opacity-20" onClick={handleBookConsultation}>
+                Book Consultation
+              </Button>
+              <Button size="sm" variant="ghost" className="text-blue-200 hover:bg-white hover:bg-opacity-20" onClick={() => handleShareTool('facebook')}>
+                Share Tool
+              </Button>
+              <Button size="sm" variant="ghost" className="text-blue-200 hover:bg-white hover:bg-opacity-20" onClick={handleFeedback}>
+                Give Feedback
               </Button>
             </div>
           </div>

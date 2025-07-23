@@ -1,14 +1,24 @@
 import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { getGuidePage } from '../data/guidePages';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { CheckCircle, BookOpen, AlertTriangle, MapPin, Clock, Phone, ArrowRight } from 'lucide-react';
+import { 
+  navigateToCheckout, 
+  openPhoneCall, 
+  requestQuote, 
+  bookConsultation,
+  compareServices,
+  shareOnSocial,
+  submitFeedback 
+} from '../utils/navigationUtils';
 
 const GuidePage: React.FC = () => {
   const { guideSlug } = useParams<{ guideSlug: string }>();
+  const navigate = useNavigate();
 
   if (!guideSlug) {
     return <Navigate to="/404" replace />;
@@ -21,7 +31,36 @@ const GuidePage: React.FC = () => {
   }
 
   const handleGetStarted = () => {
-    window.location.href = '/checkout';
+    navigateToCheckout(navigate);
+  };
+
+  const handleGetExpertAdvice = () => {
+    openPhoneCall();
+  };
+
+  const handleGetQuote = () => {
+    requestQuote(guide.serviceName, guide.locationName);
+  };
+
+  const handleBookConsultation = () => {
+    bookConsultation(guide.serviceName);
+  };
+
+  const handleCompareDIYvsProfessional = () => {
+    // Navigate to a comparison page between DIY and professional service
+    const serviceSlug = guide.serviceName.toLowerCase().replace(/\s+/g, '-');
+    const locationSlug = guide.locationName.toLowerCase().replace(/\s+/g, '-');
+    compareServices(navigate, serviceSlug, 'professional', locationSlug);
+  };
+
+  const handleShareGuide = (platform: 'facebook' | 'twitter' | 'linkedin') => {
+    const url = `https://heritagebox.com/guides/${guideSlug}`;
+    const title = guide.seoData.title;
+    shareOnSocial(platform, url, title);
+  };
+
+  const handleFeedback = () => {
+    submitFeedback('guide', guideSlug);
   };
 
   const getDifficultyColor = (difficulty: 'low' | 'medium' | 'high') => {
@@ -76,7 +115,7 @@ const GuidePage: React.FC = () => {
                 <Button size="lg" onClick={handleGetStarted} className="bg-blue-600 hover:bg-blue-700">
                   Skip the DIY - Get Professional Service
                 </Button>
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" onClick={handleGetExpertAdvice}>
                   <Phone className="w-4 h-4 mr-2" />
                   Get Expert Advice
                 </Button>
@@ -267,7 +306,7 @@ const GuidePage: React.FC = () => {
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Get Professional Service
                   </Button>
-                  <Button size="lg" variant="outline">
+                  <Button size="lg" variant="outline" onClick={handleCompareDIYvsProfessional}>
                     Compare DIY vs Professional
                   </Button>
                 </div>
@@ -290,8 +329,21 @@ const GuidePage: React.FC = () => {
                 <Clock className="w-4 h-4 mr-2" />
                 Start Your Order
               </Button>
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-blue-600">
+              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-blue-600" onClick={handleGetQuote}>
                 Get Free Quote
+              </Button>
+            </div>
+            
+            {/* Additional Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={handleBookConsultation}>
+                Book Free Consultation
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={() => handleShareGuide('facebook')}>
+                Share This Guide
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white hover:bg-opacity-20" onClick={handleFeedback}>
+                Give Feedback
               </Button>
             </div>
             <p className="text-sm mt-6 opacity-90">
