@@ -17,6 +17,13 @@ AddType application/xml .xml
     Header set X-Content-Type-Options "nosniff"
 </Files>
 
+# IndexNow key file - serve as plain text
+<Files "bba4875b95e8424d8fb9fb21f629ca12.txt">
+    ForceType text/plain
+    Header set Content-Type "text/plain; charset=utf-8"
+    Header set X-Content-Type-Options "nosniff"
+</Files>
+
 # Handle existing static files (images, css, js, etc.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
