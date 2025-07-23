@@ -15,6 +15,14 @@ import AboutUs from "./pages/AboutUs";
 import ContactPage from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import ServicePage from "./pages/ServicePage";
+import LocationPage from "./pages/LocationPage";
+import ServiceCombinationPage from "./pages/ServiceCombinationPage";
+import ComparisonPage from "./pages/ComparisonPage";
+import GuidePage from "./pages/GuidePage";
+import { CityPage } from "./pages/CityPage";
+import SeasonalPage from "./pages/SeasonalPage";
+import InteractiveToolPage from "./pages/InteractiveToolPage";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +43,16 @@ const App = () => (
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            {/* Programmatic SEO Routes */}
+            <Route path="/services/:serviceSlug" element={<ServicePage />} />
+            <Route path="/services/:serviceSlug/:locationSlug" element={<ServiceCombinationPage />} />
+            <Route path="/locations/:state" element={<LocationPage />} />
+            <Route path="/locations/:state/:city" element={<LocationPage />} />
+            <Route path="/compare/:comparisonSlug" element={<ComparisonPage />} />
+            <Route path="/guides/:guideSlug" element={<GuidePage />} />
+            <Route path="/cities/:citySlug" element={<CityPage />} />
+            <Route path="/seasonal/:seasonalSlug" element={<SeasonalPage />} />
+            <Route path="/tools/:toolSlug" element={<InteractiveToolPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
