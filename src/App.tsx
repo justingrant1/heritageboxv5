@@ -1,4 +1,21 @@
 
+// TypeScript declarations for Chatlio widget
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'chatlio-widget': ChatlioWidgetAttributes;
+    }
+    interface ChatlioWidgetAttributes {
+      widgetid: string;
+    }
+  }
+  interface Window {
+    _chatlio?: {
+      identify: (userId: string, userData: { name?: string; email?: string; [key: string]: any }) => void;
+    };
+  }
+}
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
