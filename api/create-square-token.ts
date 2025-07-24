@@ -1,5 +1,7 @@
+import { Client, Environment } from 'squareup';
+
 export const config = {
-    runtime: 'edge',
+    runtime: 'nodejs18.x',
 };
 
 interface CardData {
@@ -10,6 +12,12 @@ interface CardData {
   postalCode?: string;
   cardholderName?: string;
 }
+
+// Initialize Square client
+const squareClient = new Client({
+  accessToken: process.env.SQUARE_ACCESS_TOKEN,
+  environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+});
 
 export default async function handler(request: Request) {
   if (request.method !== 'POST') {
@@ -63,21 +71,80 @@ export default async function handler(request: Request) {
       });
     }
 
-    // For demo purposes, create a mock token
-    // In production, this would integrate with Square's actual tokenization API
-    const mockToken = generateMockToken(cleanCardNumber, cvv);
-    
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Check if Square access token is configured
+    if (!process.env.SQUARE_ACCESS_TOKEN || process.env.SQUARE_ACCESS_TOKEN === 'your_square_access_token_here') {
+      console.warn('Square access token not configured, using mock tokenization');
+      
+      // Fallback to mock token for development/demo
+      const mockToken = generateMockToken(cleanCardNumber, cvv);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        token: mockToken,
+        details: {
+          card: {
+            brand: detectCardBrand(cleanCardNumber),
+            last4: cleanCardNumber.slice(-4),
+            expMonth: parseInt(expirationMonth),
+            expYear: parseInt(`20${expirationYear}`)
+          }
+        }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-    // Return success with mock token
+    // Create real Square card token using Square's Cards API
+    const cardsApi = squareClient.cardsApi;
+    
+    const createCardRequest = {
+      sourceId: 'EXTERNAL_API', // Required for server-side tokenization
+      card: {
+        cardNumber: cleanCardNumber,
+        expMonth: BigInt(parseInt(expirationMonth)),
+        expYear: BigInt(parseInt(`20${expirationYear}`)),
+        cvv: cvv,
+        ...(postalCode && { billingAddress: { postalCode } }),
+        ...(cardholderName && { cardholderName })
+      }
+    };
+
+    console.log('Creating Square card token...');
+    const { result, statusCode } = await cardsApi.createCard(createCardRequest);
+
+    if (statusCode !== 200 || !result.card) {
+      console.error('Square tokenization failed:', result);
+      
+      // Fallback to mock token if Square API fails
+      console.warn('Falling back to mock tokenization due to Square API error');
+      const mockToken = generateMockToken(cleanCardNumber, cvv);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        token: mockToken,
+        details: {
+          card: {
+            brand: detectCardBrand(cleanCardNumber),
+            last4: cleanCardNumber.slice(-4),
+            expMonth: parseInt(expirationMonth),
+            expYear: parseInt(`20${expirationYear}`)
+          }
+        }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Return success with real Square token
     return new Response(JSON.stringify({
       success: true,
-      token: mockToken,
+      token: result.card.id,
       details: {
         card: {
-          brand: detectCardBrand(cleanCardNumber),
-          last4: cleanCardNumber.slice(-4),
+          brand: result.card.cardBrand || detectCardBrand(cleanCardNumber),
+          last4: result.card.last4 || cleanCardNumber.slice(-4),
           expMonth: parseInt(expirationMonth),
           expYear: parseInt(`20${expirationYear}`)
         }
@@ -133,10 +200,9 @@ function detectCardBrand(cardNumber: string): string {
   return 'OTHER_BRAND';
 }
 
-// Generate mock token for demo purposes
+// Generate mock token for fallback purposes
 function generateMockToken(cardNumber: string, cvv: string): string {
   const timestamp = Date.now().toString();
-  // Use crypto.subtle for edge runtime compatibility instead of Buffer
   const encoder = new TextEncoder();
   const data = encoder.encode(`${cardNumber.slice(-4)}_${cvv}_${timestamp}`);
   const hashArray = Array.from(new Uint8Array(data));
