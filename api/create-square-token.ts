@@ -1,5 +1,3 @@
-import { Client, Environment } from 'squareup';
-
 export const config = {
     runtime: 'nodejs',
 };
@@ -12,12 +10,6 @@ interface CardData {
   postalCode?: string;
   cardholderName?: string;
 }
-
-// Initialize Square client
-const squareClient = new Client({
-  accessToken: process.env.SQUARE_ACCESS_TOKEN,
-  environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
-});
 
 export default async function handler(request: Request) {
   if (request.method !== 'POST') {
@@ -95,25 +87,38 @@ export default async function handler(request: Request) {
       });
     }
 
-    // Create real Square card token using Square's Cards API
-    const cardsApi = squareClient.cardsApi;
+    // Create real Square card token using direct REST API
+    const squareApiUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://connect.squareup.com' 
+      : 'https://connect.squareupsandbox.com';
     
     const createCardRequest = {
-      sourceId: 'EXTERNAL_API', // Required for server-side tokenization
+      source_id: 'EXTERNAL_API', // Required for server-side tokenization
       card: {
-        cardNumber: cleanCardNumber,
-        expMonth: BigInt(parseInt(expirationMonth)),
-        expYear: BigInt(parseInt(`20${expirationYear}`)),
+        number: cleanCardNumber,
+        exp_month: parseInt(expirationMonth),
+        exp_year: parseInt(`20${expirationYear}`),
         cvv: cvv,
-        ...(postalCode && { billingAddress: { postalCode } }),
-        ...(cardholderName && { cardholderName })
+        ...(postalCode && { billing_address: { postal_code: postalCode } }),
+        ...(cardholderName && { cardholder_name: cardholderName })
       }
     };
 
-    console.log('Creating Square card token...');
-    const { result, statusCode } = await cardsApi.createCard(createCardRequest);
+    console.log('Creating Square card token via REST API...');
+    
+    const response = await fetch(`${squareApiUrl}/v2/cards`, {
+      method: 'POST',
+      headers: {
+        'Square-Version': '2024-02-15',
+        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(createCardRequest)
+    });
 
-    if (statusCode !== 200 || !result.card) {
+    const result = await response.json();
+
+    if (!response.ok || result.errors) {
       console.error('Square tokenization failed:', result);
       
       // Fallback to mock token if Square API fails
@@ -143,8 +148,8 @@ export default async function handler(request: Request) {
       token: result.card.id,
       details: {
         card: {
-          brand: result.card.cardBrand || detectCardBrand(cleanCardNumber),
-          last4: result.card.last4 || cleanCardNumber.slice(-4),
+          brand: result.card.card_brand || detectCardBrand(cleanCardNumber),
+          last4: result.card.last_4 || cleanCardNumber.slice(-4),
           expMonth: parseInt(expirationMonth),
           expYear: parseInt(`20${expirationYear}`)
         }
@@ -156,6 +161,7 @@ export default async function handler(request: Request) {
 
   } catch (error) {
     console.error('Square tokenization error:', error);
+    
     return new Response(JSON.stringify({ 
       error: 'Payment processing error',
       success: false 
