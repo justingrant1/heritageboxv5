@@ -14,6 +14,7 @@ interface SquarePayments {
 }
 
 interface CardOptions {
+  autocomplete?: boolean;
   style?: {
     '.input-container'?: {
       borderRadius?: string;
@@ -197,6 +198,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         
         // Style to match the screenshot exactly - using only valid Square SDK properties
         const cardOptions: CardOptions = {
+          autocomplete: true, // Enable browser autofill
           style: {
             '.input-container': {
               borderRadius: '12px',
