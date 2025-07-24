@@ -1,7 +1,3 @@
-export const config = {
-    runtime: 'nodejs',
-};
-
 // Square tokenization API with direct REST calls
 
 interface CardData {

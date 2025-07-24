@@ -1,7 +1,3 @@
-export const config = {
-    runtime: 'edge',
-};
-
 // Helper function for structured logging
 function logEvent(event: string, data: any) {
     console.log(JSON.stringify({

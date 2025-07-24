@@ -1,7 +1,3 @@
-export const config = {
-    runtime: 'nodejs', // Use Node.js runtime for Airtable SDK
-};
-
 import Airtable from 'airtable';
 
 // Helper function for structured logging
