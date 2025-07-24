@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { Check, ArrowRight, Star, Gift, Clock, Shield, Truck } from 'lucide-react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
+import ChatlioWidget from '@/components/ChatlioWidget';
 
 const PackageSelected = () => {
   const [searchParams] = useSearchParams();
@@ -413,6 +414,7 @@ const PackageSelected = () => {
       </main>
       
       <Footer />
+      <ChatlioWidget widgetId="91a8309b-bfa6-4afa-7558-e0edad2a1362" />
     </div>
   );
 };
