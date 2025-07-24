@@ -10,40 +10,11 @@ interface Square {
 }
 
 interface SquarePayments {
-  card: (options?: CardOptions) => Promise<SquareCard>;
-}
-
-interface CardOptions {
-  style?: {
-    '.input-container'?: {
-      borderRadius?: string;
-      borderColor?: string;
-      borderWidth?: string;
-      backgroundColor?: string;
-      boxShadow?: string;
-    };
-    '.input-container.is-focus'?: {
-      borderColor?: string;
-      boxShadow?: string;
-    };
-    '.input-container.is-error'?: {
-      borderColor?: string;
-    };
-    'input'?: {
-      fontSize?: string;
-      fontFamily?: string;
-      color?: string;
-      backgroundColor?: string;
-    };
-    'input::placeholder'?: {
-      color?: string;
-    };
-  };
+  card: (options?: any) => Promise<SquareCard>;
 }
 
 interface SquareCard {
-  attach: (selector: string, options?: any) => Promise<void>;
-  tokenize: () => Promise<{
+  tokenize: (cardData: CardData) => Promise<{
     status: string;
     token?: string;
     details?: {
@@ -54,8 +25,16 @@ interface SquareCard {
         expYear: number;
       };
     };
+    errors?: Array<{ field: string; message: string }>;
   }>;
-  destroy?: () => void;
+}
+
+interface CardData {
+  cardNumber: string;
+  expirationMonth: string;
+  expirationYear: string;
+  cvv: string;
+  postalCode?: string;
 }
 
 interface SquarePaymentProps {
@@ -65,9 +44,113 @@ interface SquarePaymentProps {
   amount: string;
 }
 
+interface FormData {
+  cardNumber: string;
+  expirationMonth: string;
+  expirationYear: string;
+  cvv: string;
+  cardholderName: string;
+  postalCode: string;
+}
+
+interface FormErrors {
+  cardNumber?: string;
+  expirationMonth?: string;
+  expirationYear?: string;
+  cvv?: string;
+  cardholderName?: string;
+  postalCode?: string;
+}
+
 declare global {
   interface Window { Square: Square; }
 }
+
+// Card type detection
+const detectCardType = (cardNumber: string): string => {
+  const number = cardNumber.replace(/\s/g, '');
+  
+  if (/^4/.test(number)) return 'visa';
+  if (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) return 'mastercard';
+  if (/^3[47]/.test(number)) return 'amex';
+  if (/^6/.test(number)) return 'discover';
+  
+  return 'unknown';
+};
+
+// Format card number with spaces
+const formatCardNumber = (value: string): string => {
+  const number = value.replace(/\s/g, '');
+  const cardType = detectCardType(number);
+  
+  if (cardType === 'amex') {
+    // Amex format: 4-6-5
+    return number.replace(/(\d{4})(\d{6})(\d{5})/, '$1 $2 $3');
+  } else {
+    // Standard format: 4-4-4-4
+    return number.replace(/(\d{4})(?=\d)/g, '$1 ');
+  }
+};
+
+// Format expiration date
+const formatExpiration = (value: string): string => {
+  const numbers = value.replace(/\D/g, '');
+  if (numbers.length >= 2) {
+    return numbers.substring(0, 2) + (numbers.length > 2 ? '/' + numbers.substring(2, 4) : '');
+  }
+  return numbers;
+};
+
+// Validation functions
+const validateCardNumber = (cardNumber: string): string | undefined => {
+  const number = cardNumber.replace(/\s/g, '');
+  if (!number) return 'Card number is required';
+  if (number.length < 13 || number.length > 19) return 'Invalid card number length';
+  
+  // Luhn algorithm
+  let sum = 0;
+  let isEven = false;
+  for (let i = number.length - 1; i >= 0; i--) {
+    let digit = parseInt(number.charAt(i));
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  
+  if (sum % 10 !== 0) return 'Invalid card number';
+  return undefined;
+};
+
+const validateExpiration = (month: string, year: string): { month?: string; year?: string } => {
+  const errors: { month?: string; year?: string } = {};
+  
+  if (!month) errors.month = 'Month is required';
+  else if (parseInt(month) < 1 || parseInt(month) > 12) errors.month = 'Invalid month';
+  
+  if (!year) errors.year = 'Year is required';
+  else {
+    const currentYear = new Date().getFullYear() % 100;
+    const currentMonth = new Date().getMonth() + 1;
+    const expYear = parseInt(year);
+    const expMonth = parseInt(month);
+    
+    if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      errors.year = 'Card has expired';
+    }
+  }
+  
+  return errors;
+};
+
+const validateCVV = (cvv: string, cardType: string): string | undefined => {
+  if (!cvv) return 'CVV is required';
+  const expectedLength = cardType === 'amex' ? 4 : 3;
+  if (cvv.length !== expectedLength) return `CVV must be ${expectedLength} digits`;
+  return undefined;
+};
 
 // Environment-aware configuration
 const getSquareConfig = () => {
@@ -99,20 +182,20 @@ const getSquareConfig = () => {
 const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: SquarePaymentProps) => {
   const [loaded, setLoaded] = useState(false);
   const [card, setCard] = useState<SquareCard | null>(null);
-  const [cardLoading, setCardLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [config] = useState(getSquareConfig());
-
-  // Cleanup function to destroy card instance
-  const cleanupCard = () => {
-    if (card && typeof card.destroy === 'function') {
-      try {
-        card.destroy();
-      } catch (e) {
-        console.warn("Error destroying card instance:", e);
-      }
-    }
-  };
+  
+  const [formData, setFormData] = useState<FormData>({
+    cardNumber: '',
+    expirationMonth: '',
+    expirationYear: '',
+    cvv: '',
+    cardholderName: '',
+    postalCode: ''
+  });
+  
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [cardType, setCardType] = useState<string>('unknown');
 
   useEffect(() => {
     const existingScript = document.getElementById('square-script');
@@ -138,7 +221,6 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     document.body.appendChild(script);
 
     return () => {
-      cleanupCard();
       const scriptToRemove = document.getElementById('square-script');
       if (scriptToRemove) {
         try {
@@ -151,9 +233,9 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   }, [config.jsUrl]);
 
   useEffect(() => {
-    if (!loaded || card) return;
+    if (!loaded) return;
 
-    async function initializeCard() {
+    async function initializeSquare() {
       if (!config.appId || !config.locationId) {
         const errorMessage = "Payment provider is not configured. Please contact support.";
         console.error(errorMessage);
@@ -168,72 +250,13 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       }
 
       try {
-        setCardLoading(true);
         console.log("Initializing Square Payments:", config);
-
-        const waitForContainer = () => {
-          return new Promise((resolve, reject) => {
-            const checkContainer = () => {
-              const container = document.getElementById('card-container');
-              if (container) {
-                resolve(container);
-              } else {
-                setTimeout(checkContainer, 100);
-              }
-            };
-            checkContainer();
-            
-            setTimeout(() => reject(new Error('Container timeout')), 5000);
-          });
-        };
-
-        await waitForContainer();
 
         const payments = window.Square.payments(config.appId, config.locationId, {
           environment: import.meta.env.MODE === 'production' ? 'production' : 'sandbox'
         });
 
-        console.log("Creating card instance");
-        
-        // Style to match the screenshot exactly - using only valid Square SDK properties
-        const cardOptions: CardOptions = {
-          style: {
-            '.input-container': {
-              borderRadius: '12px',
-              borderColor: '#d1d5db',
-              borderWidth: '2px'
-            },
-            '.input-container.is-focus': {
-              borderColor: '#3b82f6'
-            },
-            '.input-container.is-error': {
-              borderColor: '#ef4444'
-            },
-            'input': {
-              fontSize: '16px',
-              fontFamily: 'Arial, sans-serif',
-              color: '#374151'
-            },
-            'input::placeholder': {
-              color: '#9ca3af'
-            }
-          }
-        };
-
-        const cardInstance = await payments.card(cardOptions);
-
-        const container = document.getElementById('card-container');
-        if (!container) {
-          throw new Error('Card container not found in DOM');
-        }
-
-        console.log("Attaching card to container");
-        await cardInstance.attach('#card-container', {
-          includeInputLabels: true,
-          postalCode: true
-        });
-        console.log("Card attached successfully");
-
+        const cardInstance = await payments.card();
         setCard(cardInstance);
         setError(null);
       } catch (e) {
@@ -242,13 +265,80 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         toast.error("Failed to initialize payment form", {
           description: "Please try again or use a different payment method",
         });
-      } finally {
-        setCardLoading(false);
       }
     }
 
-    setTimeout(initializeCard, 100);
-  }, [loaded, card, config]);
+    initializeSquare();
+  }, [loaded, config]);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    let formattedValue = value;
+    
+    if (field === 'cardNumber') {
+      // Remove non-digits and limit length
+      const numbers = value.replace(/\D/g, '');
+      const maxLength = detectCardType(numbers) === 'amex' ? 15 : 16;
+      const truncated = numbers.substring(0, maxLength);
+      formattedValue = formatCardNumber(truncated);
+      setCardType(detectCardType(truncated));
+    } else if (field === 'cvv') {
+      // Only allow digits
+      formattedValue = value.replace(/\D/g, '').substring(0, cardType === 'amex' ? 4 : 3);
+    } else if (field === 'postalCode') {
+      // Allow alphanumeric for international postal codes
+      formattedValue = value.replace(/[^a-zA-Z0-9\s-]/g, '').substring(0, 10);
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: formattedValue }));
+    
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleExpirationChange = (value: string) => {
+    const formatted = formatExpiration(value);
+    const [month, year] = formatted.split('/');
+    
+    setFormData(prev => ({
+      ...prev,
+      expirationMonth: month || '',
+      expirationYear: year || ''
+    }));
+    
+    // Clear expiration errors
+    setFormErrors(prev => ({
+      ...prev,
+      expirationMonth: undefined,
+      expirationYear: undefined
+    }));
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
+    // Validate card number
+    const cardError = validateCardNumber(formData.cardNumber);
+    if (cardError) errors.cardNumber = cardError;
+    
+    // Validate expiration
+    const expErrors = validateExpiration(formData.expirationMonth, formData.expirationYear);
+    if (expErrors.month) errors.expirationMonth = expErrors.month;
+    if (expErrors.year) errors.expirationYear = expErrors.year;
+    
+    // Validate CVV
+    const cvvError = validateCVV(formData.cvv, cardType);
+    if (cvvError) errors.cvv = cvvError;
+    
+    // Validate cardholder name
+    if (!formData.cardholderName.trim()) {
+      errors.cardholderName = 'Cardholder name is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handlePaymentSubmit = async () => {
     if (!card) {
@@ -258,13 +348,30 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       return;
     }
 
+    if (!validateForm()) {
+      toast.error("Please correct the errors in the form", {
+        description: "Check your card details and try again",
+      });
+      return;
+    }
+
     try {
-      const result = await card.tokenize();
+      const cardData: CardData = {
+        cardNumber: formData.cardNumber.replace(/\s/g, ''),
+        expirationMonth: formData.expirationMonth,
+        expirationYear: formData.expirationYear,
+        cvv: formData.cvv,
+        postalCode: formData.postalCode
+      };
+
+      const result = await card.tokenize(cardData);
+      
       if (result.status === 'OK' && result.token) {
         onSuccess(result.token, result.details);
       } else {
+        console.error("Square tokenization failed:", result.errors);
         toast.error("Payment processing failed", {
-          description: "Please check your card details and try again",
+          description: result.errors?.[0]?.message || "Please check your card details and try again",
         });
       }
     } catch (e) {
@@ -274,6 +381,47 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       });
     }
   };
+
+  const getCardLogo = () => {
+    switch (cardType) {
+      case 'visa':
+        return <img src="/visa.svg" alt="Visa" className="h-6" />;
+      case 'mastercard':
+        return <img src="/mastercard.svg" alt="MasterCard" className="h-6" />;
+      case 'amex':
+        return <img src="/amex.svg" alt="American Express" className="h-6" />;
+      default:
+        return <CardIcon size={24} className="text-gray-400" />;
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="max-w-lg mx-auto bg-white">
+        <div className={`${styles.cardContainer} ${styles.errorContainer} flex flex-col items-center justify-center`}>
+          <p className="font-medium">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+            className="mt-4"
+          >
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="max-w-lg mx-auto bg-white">
+        <div className={`${styles.cardContainer} ${styles.loadingContainer} flex items-center justify-center`}>
+          <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+          <span className="ml-2 text-gray-500">Loading secure payment...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg mx-auto bg-white">
@@ -304,41 +452,120 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
           <img src="/amex.svg" alt="American Express" className="h-8" />
         </div>
         
-        {/* Card Input Container - Always render the container for Square to attach */}
-        <div className="space-y-4">
-          <form autoComplete="on">
-            <div 
-              id="card-container" 
-              className={styles.cardContainer}
-              data-autocomplete="cc-number cc-exp cc-csc"
-              style={{ 
-                display: ((cardLoading && !card) || !loaded || error) ? 'none' : 'block' 
-              }}
+        {/* Custom Payment Form */}
+        <form autoComplete="on" className="space-y-4">
+          {/* Card Number */}
+          <div>
+            <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 mb-2">
+              Card Number
+            </label>
+            <div className="relative">
+              <input
+                id="cardNumber"
+                type="text"
+                autoComplete="cc-number"
+                inputMode="numeric"
+                placeholder="1234 5678 9012 3456"
+                value={formData.cardNumber}
+                onChange={(e) => handleInputChange('cardNumber', e.target.value)}
+                className={`${styles.input} ${formErrors.cardNumber ? styles.inputError : ''} pr-12`}
+                style={{ fontSize: '16px' }} // Prevent iOS zoom
+              />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {getCardLogo()}
+              </div>
+            </div>
+            {formErrors.cardNumber && (
+              <p className="text-red-500 text-sm mt-1">{formErrors.cardNumber}</p>
+            )}
+          </div>
+
+          {/* Expiration and CVV Row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Expiration Date */}
+            <div>
+              <label htmlFor="expiration" className="block text-sm font-medium text-gray-700 mb-2">
+                Expiration Date
+              </label>
+              <input
+                id="expiration"
+                type="text"
+                autoComplete="cc-exp"
+                inputMode="numeric"
+                placeholder="MM/YY"
+                value={formData.expirationMonth + (formData.expirationYear ? '/' + formData.expirationYear : '')}
+                onChange={(e) => handleExpirationChange(e.target.value)}
+                className={`${styles.input} ${formErrors.expirationMonth || formErrors.expirationYear ? styles.inputError : ''}`}
+                style={{ fontSize: '16px' }} // Prevent iOS zoom
+                maxLength={5}
+              />
+              {(formErrors.expirationMonth || formErrors.expirationYear) && (
+                <p className="text-red-500 text-sm mt-1">
+                  {formErrors.expirationMonth || formErrors.expirationYear}
+                </p>
+              )}
+            </div>
+
+            {/* CVV */}
+            <div>
+              <label htmlFor="cvv" className="block text-sm font-medium text-gray-700 mb-2">
+                CVV
+              </label>
+              <input
+                id="cvv"
+                type="text"
+                autoComplete="cc-csc"
+                inputMode="numeric"
+                placeholder={cardType === 'amex' ? '1234' : '123'}
+                value={formData.cvv}
+                onChange={(e) => handleInputChange('cvv', e.target.value)}
+                className={`${styles.input} ${formErrors.cvv ? styles.inputError : ''}`}
+                style={{ fontSize: '16px' }} // Prevent iOS zoom
+                maxLength={cardType === 'amex' ? 4 : 3}
+              />
+              {formErrors.cvv && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.cvv}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Cardholder Name */}
+          <div>
+            <label htmlFor="cardholderName" className="block text-sm font-medium text-gray-700 mb-2">
+              Cardholder Name
+            </label>
+            <input
+              id="cardholderName"
+              type="text"
+              autoComplete="cc-name"
+              placeholder="John Doe"
+              value={formData.cardholderName}
+              onChange={(e) => handleInputChange('cardholderName', e.target.value)}
+              className={`${styles.input} ${formErrors.cardholderName ? styles.inputError : ''}`}
+              style={{ fontSize: '16px' }} // Prevent iOS zoom
             />
-          </form>
-          
-          {/* Loading overlay */}
-          {((cardLoading && !card) || !loaded) && (
-            <div className={`${styles.cardContainer} ${styles.loadingContainer} flex items-center justify-center`}>
-              <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
-              <span className="ml-2 text-gray-500">Loading secure payment...</span>
-            </div>
-          )}
-          
-          {/* Error overlay */}
-          {error && (
-            <div className={`${styles.cardContainer} ${styles.errorContainer} flex flex-col items-center justify-center`}>
-              <p className="font-medium">{error}</p>
-              <Button
-                onClick={() => window.location.reload()}
-                variant="outline"
-                className="mt-4"
-              >
-                Refresh Page
-              </Button>
-            </div>
-          )}
-        </div>
+            {formErrors.cardholderName && (
+              <p className="text-red-500 text-sm mt-1">{formErrors.cardholderName}</p>
+            )}
+          </div>
+
+          {/* Postal Code */}
+          <div>
+            <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
+              Postal Code
+            </label>
+            <input
+              id="postalCode"
+              type="text"
+              autoComplete="postal-code"
+              placeholder="12345"
+              value={formData.postalCode}
+              onChange={(e) => handleInputChange('postalCode', e.target.value)}
+              className={styles.input}
+              style={{ fontSize: '16px' }} // Prevent iOS zoom
+            />
+          </div>
+        </form>
         
         {/* All Major Credit Cards Accepted */}
         <div className="flex items-center justify-center gap-2 text-gray-600 mt-4">
@@ -351,7 +578,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       <Button
         onClick={handlePaymentSubmit}
         className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 mb-6"
-        disabled={isProcessing || !card || !!error}
+        disabled={isProcessing || !card}
       >
         {isProcessing ? (
           <>
