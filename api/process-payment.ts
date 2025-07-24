@@ -47,9 +47,9 @@ export default async function handler(request: Request) {
           });
       }
 
-      const squareAccessToken = process.env.SQUARE_ACCESS_TOKEN;
-      const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID;
-      const SQUARE_API_URL = process.env.SQUARE_API_URL;
+      const squareAccessToken = process.env.SQUARE_ACCESS_TOKEN || "EAAAl1PTt4PYjqbVyX9Ho6eLP156f3tAI8Zoj-KohYWMzZqQJf79Qyq7BkCznxd9";
+      const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID || "L6JKGA1KJ9W89";
+      const SQUARE_API_URL = process.env.SQUARE_API_URL || "https://connect.squareup.com";
 
       logEvent('environment_check', {
           hasAccessToken: !!squareAccessToken,
