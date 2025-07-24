@@ -1,5 +1,6 @@
 
 // TypeScript declarations for Chatlio widget
+// Minor update for deployment
 declare global {
   namespace JSX {
     interface IntrinsicElements {
