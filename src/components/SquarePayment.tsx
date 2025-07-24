@@ -199,6 +199,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   const [card, setCard] = useState<SquareCard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [config] = useState(getSquareConfig());
+  const [localProcessing, setLocalProcessing] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     cardNumber: '',
@@ -360,6 +361,13 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     console.log("📝 Form data:", formData);
     console.log("🔍 Loaded state:", loaded);
     console.log("⚡ Processing state:", isProcessing);
+    console.log("🔒 Local processing state:", localProcessing);
+    
+    // Prevent double-click
+    if (localProcessing || isProcessing) {
+      console.log("⚠️ Already processing, ignoring click");
+      return;
+    }
     
     if (!validateForm()) {
       console.log("❌ Form validation failed");
@@ -370,6 +378,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     }
     
     console.log("✅ Form validation passed, proceeding with payment");
+    setLocalProcessing(true);
 
     try {
       console.log("🔄 Starting payment processing...");
@@ -388,14 +397,20 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         };
         console.log("📤 Request body:", requestBody);
         
+        // Add timeout to the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         const response = await fetch('/api/create-square-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(requestBody),
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         console.log("📥 API response status:", response.status);
         
         if (response.ok) {
@@ -461,6 +476,8 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       toast.error("Payment processing error", {
         description: "Please try again or use a different card",
       });
+    } finally {
+      setLocalProcessing(false);
     }
   };
 
@@ -699,9 +716,9 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       <Button
         onClick={handlePaymentSubmit}
         className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 mb-6"
-        disabled={isProcessing || !loaded}
+        disabled={isProcessing || !loaded || localProcessing}
       >
-        {isProcessing ? (
+        {(isProcessing || localProcessing) ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
             Processing Payment...
