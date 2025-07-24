@@ -1,4 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+    runtime: 'edge',
+};
 
 interface CardData {
   cardNumber: string;
@@ -9,19 +11,25 @@ interface CardData {
   cardholderName?: string;
 }
 
-const handler = async (req: VercelRequest, res: VercelResponse) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request: Request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
-    const { cardNumber, expirationMonth, expirationYear, cvv, postalCode, cardholderName }: CardData = req.body;
+    const { cardNumber, expirationMonth, expirationYear, cvv, postalCode, cardholderName }: CardData = await request.json();
 
     // Validate required fields
     if (!cardNumber || !expirationMonth || !expirationYear || !cvv) {
-      return res.status(400).json({ 
+      return new Response(JSON.stringify({ 
         error: 'Missing required card information',
         success: false 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -30,9 +38,12 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
     
     // Luhn algorithm validation
     if (!isValidCardNumber(cleanCardNumber)) {
-      return res.status(400).json({ 
+      return new Response(JSON.stringify({ 
         error: 'Invalid card number',
         success: false 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -43,9 +54,12 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
     const expMonth = parseInt(expirationMonth);
     
     if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
-      return res.status(400).json({ 
+      return new Response(JSON.stringify({ 
         error: 'Card has expired',
         success: false 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -57,7 +71,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Return success with mock token
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       token: mockToken,
       details: {
@@ -68,13 +82,19 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
           expYear: parseInt(`20${expirationYear}`)
         }
       }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Square tokenization error:', error);
-    return res.status(500).json({ 
+    return new Response(JSON.stringify({ 
       error: 'Payment processing error',
       success: false 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
@@ -116,8 +136,10 @@ function detectCardBrand(cardNumber: string): string {
 // Generate mock token for demo purposes
 function generateMockToken(cardNumber: string, cvv: string): string {
   const timestamp = Date.now().toString();
-  const hash = Buffer.from(`${cardNumber.slice(-4)}_${cvv}_${timestamp}`).toString('base64');
-  return `sq_token_${hash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
+  // Use crypto.subtle for edge runtime compatibility instead of Buffer
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`${cardNumber.slice(-4)}_${cvv}_${timestamp}`);
+  const hashArray = Array.from(new Uint8Array(data));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `sq_token_${hashHex.replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
 }
-
-export default handler;
