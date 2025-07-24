@@ -356,12 +356,20 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   };
 
   const handlePaymentSubmit = async () => {
+    console.log("🚀 handlePaymentSubmit called");
+    console.log("📝 Form data:", formData);
+    console.log("🔍 Loaded state:", loaded);
+    console.log("⚡ Processing state:", isProcessing);
+    
     if (!validateForm()) {
+      console.log("❌ Form validation failed");
       toast.error("Please correct the errors in the form", {
         description: "Check your card details and try again",
       });
       return;
     }
+    
+    console.log("✅ Form validation passed, proceeding with payment");
 
     try {
       // Try API first, fallback to client-side tokenization for development
