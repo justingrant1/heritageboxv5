@@ -372,46 +372,63 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     console.log("✅ Form validation passed, proceeding with payment");
 
     try {
+      console.log("🔄 Starting payment processing...");
       // Try API first, fallback to client-side tokenization for development
       let result;
       
       try {
+        console.log("📡 Attempting API call to /api/create-square-token");
+        const requestBody = {
+          cardNumber: formData.cardNumber.replace(/\s/g, ''),
+          expirationMonth: formData.expirationMonth,
+          expirationYear: formData.expirationYear,
+          cvv: formData.cvv,
+          postalCode: formData.postalCode,
+          cardholderName: formData.cardholderName
+        };
+        console.log("📤 Request body:", requestBody);
+        
         const response = await fetch('/api/create-square-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            cardNumber: formData.cardNumber.replace(/\s/g, ''),
-            expirationMonth: formData.expirationMonth,
-            expirationYear: formData.expirationYear,
-            cvv: formData.cvv,
-            postalCode: formData.postalCode,
-            cardholderName: formData.cardholderName
-          }),
+          body: JSON.stringify(requestBody),
         });
 
+        console.log("📥 API response status:", response.status);
+        
         if (response.ok) {
           result = await response.json();
+          console.log("✅ API response successful:", result);
         } else {
+          const errorText = await response.text();
+          console.log("❌ API response failed:", response.status, errorText);
           throw new Error('API not available');
         }
       } catch (apiError) {
-        console.log('API not available, using client-side tokenization for development');
+        console.log('🔄 API not available, using client-side tokenization for development');
+        console.log('API Error:', apiError);
         
         // Client-side tokenization for development
         const cleanCardNumber = formData.cardNumber.replace(/\s/g, '');
+        console.log("🧹 Clean card number:", cleanCardNumber);
         
         // Basic validation
         if (!isValidCardNumberClient(cleanCardNumber)) {
+          console.log("❌ Client-side card validation failed");
           throw new Error('Invalid card number');
         }
         
+        console.log("✅ Client-side card validation passed");
+        
         // Simulate processing delay
+        console.log("⏳ Simulating processing delay...");
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Generate mock token
         const mockToken = generateMockTokenClient(cleanCardNumber, formData.cvv);
+        console.log("🎫 Generated mock token:", mockToken);
         
         result = {
           success: true,
@@ -425,18 +442,22 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
             }
           }
         };
+        console.log("✅ Mock result created:", result);
       }
       
+      console.log("🎯 Final result:", result);
+      
       if (result.success && result.token) {
+        console.log("🎉 Payment successful, calling onSuccess");
         onSuccess(result.token, result.details);
       } else {
-        console.error("Square tokenization failed:", result.errors);
+        console.error("❌ Square tokenization failed:", result.errors);
         toast.error("Payment processing failed", {
           description: result.error || "Please check your card details and try again",
         });
       }
     } catch (e) {
-      console.error("Square payment error:", e);
+      console.error("💥 Square payment error:", e);
       toast.error("Payment processing error", {
         description: "Please try again or use a different card",
       });
