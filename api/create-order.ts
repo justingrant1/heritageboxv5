@@ -1,3 +1,7 @@
+export const config = {
+    runtime: 'nodejs', // Use Node.js runtime for Airtable SDK
+};
+
 import Airtable from 'airtable';
 
 // Helper function for structured logging
@@ -53,8 +57,8 @@ const generateOrderNumber = async (): Promise<string> => {
         
         return nextOrderNumber.toString();
         
-    } catch (error: any) {
-        logEvent('order_number_generation_error', { error: error?.message || 'Unknown error' });
+    } catch (error) {
+        logEvent('order_number_generation_error', { error: error.message });
         // Fallback to timestamp-based if database query fails
         const timestamp = Date.now().toString();
         return `100420${timestamp.slice(-3)}`;
@@ -107,8 +111,8 @@ const findOrCreateCustomer = async (customerInfo: any): Promise<string | null> =
         logEvent('airtable_customer_created', { customerId });
         return customerId;
 
-    } catch (error: any) {
-        logEvent('airtable_customer_error', { error: error?.message || 'Unknown error' });
+    } catch (error) {
+        logEvent('airtable_customer_error', { error: error.message });
         return null;
     }
 };
@@ -148,8 +152,8 @@ const findOrCreateProduct = async (orderItem: any): Promise<string | null> => {
         logEvent('airtable_product_created', { productId });
         return productId;
 
-    } catch (error: any) {
-        logEvent('airtable_product_error', { error: error?.message || 'Unknown error' });
+    } catch (error) {
+        logEvent('airtable_product_error', { error: error.message });
         return null;
     }
 };
@@ -281,13 +285,13 @@ const createOrder = async (customerId: string, orderData: any): Promise<string |
         
         return orderId;
 
-    } catch (error: any) {
-        logEvent('airtable_order_error', { error: error?.message || 'Unknown error' });
+    } catch (error) {
+        logEvent('airtable_order_error', { error: error.message });
         return null;
     }
 };
 
-module.exports = async function handler(request: Request) {
+export default async function handler(request: Request) {
     logEvent('create_order_request', { method: request.method });
 
     if (request.method !== 'POST') {
@@ -356,12 +360,12 @@ module.exports = async function handler(request: Request) {
             headers: { 'Content-Type': 'application/json' }
         });
 
-    } catch (error: any) {
-        logEvent('create_order_error', { error: error?.message || 'Unknown error' });
+    } catch (error) {
+        logEvent('create_order_error', { error: error.message });
 
         return new Response(JSON.stringify({
             success: false,
-            error: error?.message || 'Failed to create order'
+            error: error.message || 'Failed to create order'
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

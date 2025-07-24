@@ -1,4 +1,6 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+    runtime: 'edge',
+};
 
 // Helper function for structured logging
 function logEvent(event: string, data: any) {
@@ -9,20 +11,23 @@ function logEvent(event: string, data: any) {
     }));
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(request: Request) {
     logEvent('request_received', {
-        method: req.method,
-        url: req.url,
-        headers: req.headers
+        method: request.method,
+        url: request.url,
+        headers: Object.fromEntries(request.headers.entries())
     });
 
-    if (req.method !== 'POST') {
-        logEvent('method_not_allowed', {method: req.method});
-        return res.status(405).json({success: false, error: 'Method not allowed'});
+    if (request.method !== 'POST') {
+        logEvent('method_not_allowed', {method: request.method});
+        return new Response(JSON.stringify({success: false, error: 'Method not allowed'}), {
+            status: 405,
+            headers: {'Content-Type': 'application/json'}
+        });
     }
 
     try {
-        const body = req.body;
+        const body = await request.json();
         logEvent('request_body_parsed', {
             hasToken: !!body.token,
             amount: body.amount,
@@ -36,7 +41,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 missingToken: !token,
                 missingAmount: !amount
             });
-            return res.status(400).json({success: false, error: 'Missing required fields'});
+            return new Response(JSON.stringify({success: false, error: 'Missing required fields'}), {
+                status: 400,
+                headers: {'Content-Type': 'application/json'}
+            });
         }
 
         const squareAccessToken = process.env.SQUARE_ACCESS_TOKEN;
@@ -52,105 +60,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!squareAccessToken) {
             logEvent('configuration_error', {error: 'SQUARE_ACCESS_TOKEN not configured'});
-            return res.status(500).json({success: false, error: 'Payment service not configured - missing access token'});
+            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing access token'}), {
+                status: 500,
+                headers: {'Content-Type': 'application/json'}
+            });
         }
 
         if (!SQUARE_LOCATION_ID) {
             logEvent('configuration_error', {error: 'SQUARE_LOCATION_ID not configured'});
-            return res.status(500).json({success: false, error: 'Payment service not configured - missing location ID'});
+            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing location ID'}), {
+                status: 500,
+                headers: {'Content-Type': 'application/json'}
+            });
         }
 
         if (!SQUARE_API_URL) {
             logEvent('configuration_error', {error: 'SQUARE_API_URL not configured'});
-            return res.status(500).json({success: false, error: 'Payment service not configured - missing API URL'});
+            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing API URL'}), {
+                status: 500,
+                headers: {'Content-Type': 'application/json'}
+            });
         }
 
-        // Check if this is a mock token (fallback from tokenization API)
-        const isMockToken = token.startsWith('sq_token_') && token.length < 30;
-        
-        let result;
-        
-        if (isMockToken) {
-            logEvent('mock_payment_detected', {
-                token,
-                amount,
-                locationId: SQUARE_LOCATION_ID
-            });
-            
-            // Simulate successful payment for mock tokens
-            result = {
-                payment: {
-                    id: `mock_payment_${crypto.randomUUID()}`,
-                    amount_money: {
-                        amount: Math.round(amount * 100),
-                        currency: 'USD'
-                    },
-                    status: 'COMPLETED',
-                    location_id: SQUARE_LOCATION_ID,
-                    created_at: new Date().toISOString(),
-                    source_type: 'CARD'
-                }
-            };
-            
-            logEvent('mock_payment_successful', {
-                paymentId: result.payment.id,
-                amount: result.payment.amount_money.amount,
-                status: result.payment.status
-            });
-        } else {
-            logEvent('square_payment_initiated', {
-                amount,
-                locationId: SQUARE_LOCATION_ID,
-                environment: process.env.NODE_ENV
-            });
+        logEvent('square_payment_initiated', {
+            amount,
+            locationId: SQUARE_LOCATION_ID,
+            environment: process.env.NODE_ENV
+        });
 
-            const response = await fetch(`${SQUARE_API_URL}/v2/payments`, {
-                method: 'POST',
-                headers: {
-                    'Square-Version': '2024-02-15',
-                    'Authorization': `Bearer ${squareAccessToken}`,
-                    'Content-Type': 'application/json',
+        const response = await fetch(`${SQUARE_API_URL}/v2/payments`, {
+            method: 'POST',
+            headers: {
+                'Square-Version': '2024-02-15',
+                'Authorization': `Bearer ${squareAccessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                source_id: token,
+                amount_money: {
+                    amount: Math.round(amount * 100), // Convert to cents
+                    currency: 'USD'
                 },
-                body: JSON.stringify({
-                    source_id: token,
-                    amount_money: {
-                        amount: Math.round(amount * 100), // Convert to cents
-                        currency: 'USD'
-                    },
-                    location_id: SQUARE_LOCATION_ID,
-                    idempotency_key: crypto.randomUUID()
-                })
-            });
+                location_id: SQUARE_LOCATION_ID,
+                idempotency_key: crypto.randomUUID()
+            })
+        });
 
-            result = await response.json();
-            logEvent('square_response_received', {
+        const result = await response.json();
+        logEvent('square_response_received', {
+            status: response.status,
+            ok: response.ok,
+            hasErrors: !!result.errors,
+            errorDetails: result.errors,
+            fullResponse: result
+        });
+
+        if (!response.ok) {
+            // Log more detailed error information
+            logEvent('square_api_error', {
                 status: response.status,
-                ok: response.ok,
-                hasErrors: !!result.errors,
-                errorDetails: result.errors,
-                fullResponse: result
+                errors: result.errors,
+                fullErrorResponse: result
             });
-
-            if (!response.ok) {
-                // Log more detailed error information
-                logEvent('square_api_error', {
-                    status: response.status,
-                    errors: result.errors,
-                    fullErrorResponse: result
-                });
-                
-                const errorMessage = result.errors?.[0]?.detail || result.errors?.[0]?.code || 'Payment failed';
-                throw new Error(errorMessage);
-            }
-
-            logEvent('payment_successful', {
-                paymentId: result.payment?.id,
-                amount: result.payment?.amount_money?.amount,
-                status: result.payment?.status
-            });
+            
+            const errorMessage = result.errors?.[0]?.detail || result.errors?.[0]?.code || 'Payment failed';
+            throw new Error(errorMessage);
         }
 
-        // Save the order to Airtable (with timeout to prevent hanging)
+        logEvent('payment_successful', {
+            paymentId: result.payment?.id,
+            amount: result.payment?.amount_money?.amount,
+            status: result.payment?.status
+        });
+
+        // Save the order to Airtable
         if (orderDetails) {
             try {
                 logEvent('airtable_integration_started', {
@@ -159,16 +142,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
 
                 // Get the base URL from the current request
-                const protocol = req.headers['x-forwarded-proto'] || 'https';
-                const host = req.headers.host;
-                const baseUrl = `${protocol}://${host}`;
+                const url = new URL(request.url);
+                const baseUrl = `${url.protocol}//${url.host}`;
                 
-                // Create a timeout promise to prevent hanging
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Airtable request timeout')), 5000);
-                });
-                
-                const fetchPromise = fetch(`${baseUrl}/api/create-order`, {
+                const airtableResponse = await fetch(`${baseUrl}/api/create-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -181,8 +158,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     })
                 });
 
-                const airtableResponse = await Promise.race([fetchPromise, timeoutPromise]) as Response;
-
                 if (airtableResponse.ok) {
                     logEvent('airtable_integration_success', {
                         paymentId: result.payment?.id
@@ -194,34 +169,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         error: airtableError
                     });
                 }
-            } catch (error: any) {
+            } catch (error) {
                 logEvent('airtable_integration_error', {
                     paymentId: result.payment?.id,
-                    error: error?.message || 'Unknown error'
+                    error: error.message
                 });
                 // Don't fail the payment if Airtable fails
             }
         }
 
-        logEvent('payment_response_sending', {
-            paymentId: result.payment?.id,
-            success: true
-        });
-
-        return res.status(200).json({
+        return new Response(JSON.stringify({
             success: true,
             payment: result.payment
+        }), {
+            status: 200,
+            headers: {'Content-Type': 'application/json'}
         });
-    } catch (error: any) {
+    } catch (error) {
         logEvent('payment_error', {
-            error: error?.message || 'Unknown error',
-            stack: error?.stack,
-            name: error?.name
+            error: error.message,
+            stack: error.stack,
+            name: error.name
         });
 
-        return res.status(500).json({
+        return new Response(JSON.stringify({
             success: false,
-            error: error?.message || 'Internal server error'
+            error: error.message || 'Internal server error'
+        }), {
+            status: 500,
+            headers: {'Content-Type': 'application/json'}
         });
     }
 }
