@@ -226,7 +226,16 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         }
 
         console.log("Attaching card to container");
-        await cardInstance.attach('#card-container');
+        await cardInstance.attach('#card-container', {
+          includeInputLabels: true,
+          postalCode: true,
+          autocomplete: {
+            cardNumber: 'cc-number',
+            expirationDate: 'cc-exp',
+            cvv: 'cc-csc',
+            postalCode: 'postal-code'
+          }
+        });
         console.log("Card attached successfully");
 
         setCard(cardInstance);

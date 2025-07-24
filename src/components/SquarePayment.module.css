@@ -24,6 +24,10 @@
   user-select: text;
   -webkit-touch-callout: default;
   touch-action: manipulation;
+  
+  /* Autofill support */
+  -webkit-autofill: auto;
+  -webkit-text-security: none;
 }
 
 .cardContainer:focus-within {
