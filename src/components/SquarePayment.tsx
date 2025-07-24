@@ -189,7 +189,9 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
 
         await waitForContainer();
 
-        const payments = window.Square.payments(config.appId, config.locationId);
+        const payments = window.Square.payments(config.appId, config.locationId, {
+          environment: import.meta.env.MODE === 'production' ? 'production' : 'sandbox'
+        });
 
         console.log("Creating card instance");
         
@@ -228,13 +230,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         console.log("Attaching card to container");
         await cardInstance.attach('#card-container', {
           includeInputLabels: true,
-          postalCode: true,
-          autocomplete: {
-            cardNumber: 'cc-number',
-            expirationDate: 'cc-exp',
-            cvv: 'cc-csc',
-            postalCode: 'postal-code'
-          }
+          postalCode: true
         });
         console.log("Card attached successfully");
 
