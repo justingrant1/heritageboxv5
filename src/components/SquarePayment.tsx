@@ -14,7 +14,7 @@ interface SquarePayments {
 }
 
 interface SquareCard {
-  tokenize: (cardData: CardData) => Promise<{
+  tokenize: () => Promise<{
     status: string;
     token?: string;
     details?: {
@@ -27,14 +27,29 @@ interface SquareCard {
     };
     errors?: Array<{ field: string; message: string }>;
   }>;
+  attach: (selector: string) => void;
+  destroy: () => void;
 }
 
-interface CardData {
-  cardNumber: string;
-  expirationMonth: string;
-  expirationYear: string;
-  cvv: string;
-  postalCode?: string;
+interface CardOptions {
+  style?: {
+    input?: {
+      fontSize?: string;
+      fontFamily?: string;
+      color?: string;
+      backgroundColor?: string;
+    };
+    '.input-container'?: {
+      borderColor?: string;
+      borderRadius?: string;
+    };
+    '.input-container.is-focus'?: {
+      borderColor?: string;
+    };
+    '.input-container.is-error'?: {
+      borderColor?: string;
+    };
+  };
 }
 
 interface SquarePaymentProps {
@@ -341,13 +356,6 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
   };
 
   const handlePaymentSubmit = async () => {
-    if (!card) {
-      toast.error("Payment form not ready", {
-        description: "Please wait for the payment form to load and try again",
-      });
-      return;
-    }
-
     if (!validateForm()) {
       toast.error("Please correct the errors in the form", {
         description: "Check your card details and try again",
@@ -356,22 +364,30 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
     }
 
     try {
-      const cardData: CardData = {
-        cardNumber: formData.cardNumber.replace(/\s/g, ''),
-        expirationMonth: formData.expirationMonth,
-        expirationYear: formData.expirationYear,
-        cvv: formData.cvv,
-        postalCode: formData.postalCode
-      };
+      // Use Square's server-side tokenization API directly
+      const response = await fetch('/api/create-square-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cardNumber: formData.cardNumber.replace(/\s/g, ''),
+          expirationMonth: formData.expirationMonth,
+          expirationYear: formData.expirationYear,
+          cvv: formData.cvv,
+          postalCode: formData.postalCode,
+          cardholderName: formData.cardholderName
+        }),
+      });
 
-      const result = await card.tokenize(cardData);
+      const result = await response.json();
       
-      if (result.status === 'OK' && result.token) {
+      if (result.success && result.token) {
         onSuccess(result.token, result.details);
       } else {
         console.error("Square tokenization failed:", result.errors);
         toast.error("Payment processing failed", {
-          description: result.errors?.[0]?.message || "Please check your card details and try again",
+          description: result.error || "Please check your card details and try again",
         });
       }
     } catch (e) {
