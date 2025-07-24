@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface CardData {
   cardNumber: string;
@@ -9,7 +9,7 @@ interface CardData {
   cardholderName?: string;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+const handler = async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -119,3 +119,5 @@ function generateMockToken(cardNumber: string, cvv: string): string {
   const hash = Buffer.from(`${cardNumber.slice(-4)}_${cvv}_${timestamp}`).toString('base64');
   return `sq_token_${hash.replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
 }
+
+export default handler;
