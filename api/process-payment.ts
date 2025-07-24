@@ -1,3 +1,5 @@
+import { VercelRequest, VercelResponse } from '@vercel/node';
+
 // Helper function for structured logging
 function logEvent(event: string, data: any) {
     console.log(JSON.stringify({
@@ -7,23 +9,20 @@ function logEvent(event: string, data: any) {
     }));
 }
 
-module.exports = async function handler(request: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
     logEvent('request_received', {
-        method: request.method,
-        url: request.url,
-        headers: Object.fromEntries(request.headers.entries())
+        method: req.method,
+        url: req.url,
+        headers: req.headers
     });
 
-    if (request.method !== 'POST') {
-        logEvent('method_not_allowed', {method: request.method});
-        return new Response(JSON.stringify({success: false, error: 'Method not allowed'}), {
-            status: 405,
-            headers: {'Content-Type': 'application/json'}
-        });
+    if (req.method !== 'POST') {
+        logEvent('method_not_allowed', {method: req.method});
+        return res.status(405).json({success: false, error: 'Method not allowed'});
     }
 
     try {
-        const body = await request.json();
+        const body = req.body;
         logEvent('request_body_parsed', {
             hasToken: !!body.token,
             amount: body.amount,
@@ -37,10 +36,7 @@ module.exports = async function handler(request: Request) {
                 missingToken: !token,
                 missingAmount: !amount
             });
-            return new Response(JSON.stringify({success: false, error: 'Missing required fields'}), {
-                status: 400,
-                headers: {'Content-Type': 'application/json'}
-            });
+            return res.status(400).json({success: false, error: 'Missing required fields'});
         }
 
         const squareAccessToken = process.env.SQUARE_ACCESS_TOKEN;
@@ -56,26 +52,17 @@ module.exports = async function handler(request: Request) {
 
         if (!squareAccessToken) {
             logEvent('configuration_error', {error: 'SQUARE_ACCESS_TOKEN not configured'});
-            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing access token'}), {
-                status: 500,
-                headers: {'Content-Type': 'application/json'}
-            });
+            return res.status(500).json({success: false, error: 'Payment service not configured - missing access token'});
         }
 
         if (!SQUARE_LOCATION_ID) {
             logEvent('configuration_error', {error: 'SQUARE_LOCATION_ID not configured'});
-            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing location ID'}), {
-                status: 500,
-                headers: {'Content-Type': 'application/json'}
-            });
+            return res.status(500).json({success: false, error: 'Payment service not configured - missing location ID'});
         }
 
         if (!SQUARE_API_URL) {
             logEvent('configuration_error', {error: 'SQUARE_API_URL not configured'});
-            return new Response(JSON.stringify({success: false, error: 'Payment service not configured - missing API URL'}), {
-                status: 500,
-                headers: {'Content-Type': 'application/json'}
-            });
+            return res.status(500).json({success: false, error: 'Payment service not configured - missing API URL'});
         }
 
         // Check if this is a mock token (fallback from tokenization API)
@@ -172,8 +159,9 @@ module.exports = async function handler(request: Request) {
                 });
 
                 // Get the base URL from the current request
-                const url = new URL(request.url);
-                const baseUrl = `${url.protocol}//${url.host}`;
+                const protocol = req.headers['x-forwarded-proto'] || 'https';
+                const host = req.headers.host;
+                const baseUrl = `${protocol}://${host}`;
                 
                 const airtableResponse = await fetch(`${baseUrl}/api/create-order`, {
                     method: 'POST',
@@ -208,12 +196,9 @@ module.exports = async function handler(request: Request) {
             }
         }
 
-        return new Response(JSON.stringify({
+        return res.status(200).json({
             success: true,
             payment: result.payment
-        }), {
-            status: 200,
-            headers: {'Content-Type': 'application/json'}
         });
     } catch (error: any) {
         logEvent('payment_error', {
@@ -222,12 +207,9 @@ module.exports = async function handler(request: Request) {
             name: error?.name
         });
 
-        return new Response(JSON.stringify({
+        return res.status(500).json({
             success: false,
             error: error?.message || 'Internal server error'
-        }), {
-            status: 500,
-            headers: {'Content-Type': 'application/json'}
         });
     }
 }

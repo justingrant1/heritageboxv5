@@ -9,25 +9,21 @@ interface CardData {
   cardholderName?: string;
 }
 
-module.exports = async function handler(request: Request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+import { VercelRequest, VercelResponse } from '@vercel/node';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { cardNumber, expirationMonth, expirationYear, cvv, postalCode, cardholderName }: CardData = await request.json();
+    const { cardNumber, expirationMonth, expirationYear, cvv, postalCode, cardholderName }: CardData = req.body;
 
     // Validate required fields
     if (!cardNumber || !expirationMonth || !expirationYear || !cvv) {
-      return new Response(JSON.stringify({ 
+      return res.status(400).json({ 
         error: 'Missing required card information',
         success: false 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -36,12 +32,9 @@ module.exports = async function handler(request: Request) {
     
     // Luhn algorithm validation
     if (!isValidCardNumber(cleanCardNumber)) {
-      return new Response(JSON.stringify({ 
+      return res.status(400).json({ 
         error: 'Invalid card number',
         success: false 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -52,12 +45,9 @@ module.exports = async function handler(request: Request) {
     const expMonth = parseInt(expirationMonth);
     
     if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
-      return new Response(JSON.stringify({ 
+      return res.status(400).json({ 
         error: 'Card has expired',
         success: false 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -68,7 +58,7 @@ module.exports = async function handler(request: Request) {
       // Fallback to mock token for development/demo
       const mockToken = generateMockToken(cleanCardNumber, cvv);
       
-      return new Response(JSON.stringify({
+      return res.status(200).json({
         success: true,
         token: mockToken,
         details: {
@@ -79,9 +69,6 @@ module.exports = async function handler(request: Request) {
             expYear: parseInt(`20${expirationYear}`)
           }
         }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -123,7 +110,7 @@ module.exports = async function handler(request: Request) {
       console.warn('Falling back to mock tokenization due to Square API error');
       const mockToken = generateMockToken(cleanCardNumber, cvv);
       
-      return new Response(JSON.stringify({
+      return res.status(200).json({
         success: true,
         token: mockToken,
         details: {
@@ -134,14 +121,11 @@ module.exports = async function handler(request: Request) {
             expYear: parseInt(`20${expirationYear}`)
           }
         }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     // Return success with real Square token
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       success: true,
       token: result.card.id,
       details: {
@@ -152,20 +136,14 @@ module.exports = async function handler(request: Request) {
           expYear: parseInt(`20${expirationYear}`)
         }
       }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Square tokenization error:', error);
     
-    return new Response(JSON.stringify({ 
+    return res.status(500).json({ 
       error: 'Payment processing error',
       success: false 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
