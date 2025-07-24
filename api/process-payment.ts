@@ -150,7 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // Save the order to Airtable
+        // Save the order to Airtable (with timeout to prevent hanging)
         if (orderDetails) {
             try {
                 logEvent('airtable_integration_started', {
@@ -163,7 +163,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const host = req.headers.host;
                 const baseUrl = `${protocol}://${host}`;
                 
-                const airtableResponse = await fetch(`${baseUrl}/api/create-order`, {
+                // Create a timeout promise to prevent hanging
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Airtable request timeout')), 5000);
+                });
+                
+                const fetchPromise = fetch(`${baseUrl}/api/create-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -175,6 +180,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         actualAmount: result.payment?.amount_money?.amount / 100 // Convert back from cents
                     })
                 });
+
+                const airtableResponse = await Promise.race([fetchPromise, timeoutPromise]) as Response;
 
                 if (airtableResponse.ok) {
                     logEvent('airtable_integration_success', {
@@ -195,6 +202,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Don't fail the payment if Airtable fails
             }
         }
+
+        logEvent('payment_response_sending', {
+            paymentId: result.payment?.id,
+            success: true
+        });
 
         return res.status(200).json({
             success: true,

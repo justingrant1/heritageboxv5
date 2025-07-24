@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         number: cleanCardNumber,
         exp_month: parseInt(expirationMonth),
         exp_year: parseInt(`20${expirationYear}`),
-        cvv: cvv,
+        card_verification_value: cvv, // Square API expects this field name
         ...(postalCode && { billing_address: { postal_code: postalCode } }),
         ...(cardholderName && { cardholder_name: cardholderName })
       }
