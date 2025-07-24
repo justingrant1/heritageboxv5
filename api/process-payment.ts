@@ -7,7 +7,7 @@ function logEvent(event: string, data: any) {
     }));
 }
 
-export default async function handler(request: Request) {
+module.exports = async function handler(request: Request) {
     logEvent('request_received', {
         method: request.method,
         url: request.url,
@@ -199,10 +199,10 @@ export default async function handler(request: Request) {
                         error: airtableError
                     });
                 }
-            } catch (error) {
+            } catch (error: any) {
                 logEvent('airtable_integration_error', {
                     paymentId: result.payment?.id,
-                    error: error.message
+                    error: error?.message || 'Unknown error'
                 });
                 // Don't fail the payment if Airtable fails
             }
@@ -215,16 +215,16 @@ export default async function handler(request: Request) {
             status: 200,
             headers: {'Content-Type': 'application/json'}
         });
-    } catch (error) {
+    } catch (error: any) {
         logEvent('payment_error', {
-            error: error.message,
-            stack: error.stack,
-            name: error.name
+            error: error?.message || 'Unknown error',
+            stack: error?.stack,
+            name: error?.name
         });
 
         return new Response(JSON.stringify({
             success: false,
-            error: error.message || 'Internal server error'
+            error: error?.message || 'Internal server error'
         }), {
             status: 500,
             headers: {'Content-Type': 'application/json'}

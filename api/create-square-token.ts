@@ -9,7 +9,7 @@ interface CardData {
   cardholderName?: string;
 }
 
-export default async function handler(request: Request) {
+module.exports = async function handler(request: Request) {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
