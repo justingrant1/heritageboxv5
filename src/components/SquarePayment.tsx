@@ -670,7 +670,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
       <Button
         onClick={handlePaymentSubmit}
         className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 mb-6"
-        disabled={isProcessing || !card}
+        disabled={isProcessing || !loaded}
       >
         {isProcessing ? (
           <>
