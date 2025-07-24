@@ -1315,7 +1315,7 @@ const Checkout = () => {
                             </div>
                             <div>
                               <p className="font-semibold text-gray-900">Online Gallery & Backup</p>
-                              <p className="text-xs text-gray-500">1 year included, secure cloud storage</p>
+                              <p className="text-xs text-gray-500">1 year included then $39.99/year</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
