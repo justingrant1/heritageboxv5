@@ -91,7 +91,7 @@ export default async function handler(request: Request) {
       const response = await fetch(`${SQUARE_API_URL}/v2/payments`, {
           method: 'POST',
           headers: {
-              'Square-Version': '2025-07-16',
+              'Square-Version': '2025-04-16',
               'Authorization': `Bearer ${squareAccessToken}`,
               'Content-Type': 'application/json',
           },
