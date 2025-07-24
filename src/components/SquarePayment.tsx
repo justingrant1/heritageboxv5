@@ -230,8 +230,7 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         console.log("Attaching card to container");
         await cardInstance.attach('#card-container', {
           includeInputLabels: true,
-          postalCode: true,
-          autocomplete: 'on' // Enable browser autofill at attach level
+          postalCode: true
         });
         console.log("Card attached successfully");
 
@@ -307,13 +306,16 @@ const SquarePayment = ({ onSuccess, buttonColorClass, isProcessing, amount }: Sq
         
         {/* Card Input Container - Always render the container for Square to attach */}
         <div className="space-y-4">
-          <div 
-            id="card-container" 
-            className={styles.cardContainer}
-            style={{ 
-              display: ((cardLoading && !card) || !loaded || error) ? 'none' : 'block' 
-            }}
-          />
+          <form autoComplete="on">
+            <div 
+              id="card-container" 
+              className={styles.cardContainer}
+              data-autocomplete="cc-number cc-exp cc-csc"
+              style={{ 
+                display: ((cardLoading && !card) || !loaded || error) ? 'none' : 'block' 
+              }}
+            />
+          </form>
           
           {/* Loading overlay */}
           {((cardLoading && !card) || !loaded) && (
