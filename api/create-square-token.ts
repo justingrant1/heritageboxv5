@@ -1,7 +1,7 @@
 import { Client, Environment } from 'squareup';
 
 export const config = {
-    runtime: 'nodejs18.x',
+    runtime: 'nodejs',
 };
 
 interface CardData {
