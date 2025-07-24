@@ -1,13 +1,7 @@
 {
   "functions": {
     "api/create-order.ts": {
-      "runtime": "nodejs20.x"
-    },
-    "api/process-payment.ts": {
-      "runtime": "edge"
-    },
-    "api/create-square-token.ts": {
-      "runtime": "edge"
+      "runtime": "@vercel/node@3.0.7"
     }
   },
   "rewrites": [
